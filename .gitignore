@@ -27,3 +27,6 @@ frontend/.firebase
 
 # VS Code
 .vscode/
+
+#Custom
+temp/
