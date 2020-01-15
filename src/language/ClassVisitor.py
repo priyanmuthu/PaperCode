@@ -24,20 +24,22 @@ class ClassVisitor(libcst.CSTTransformer):
     #     return updated_node
     
     def leave_FunctionDef(self, original_node: libcst.FunctionDef, updated_node: libcst.FunctionDef) -> libcst.FunctionDef:
-        # print('Leaving Func: ', node.name.value)
-        # return libcst.FunctionDef(updated_node.name.value.upper(), updated_node.params, updated_node.body)
-        # print(self.module.code_for_node(original_node))
-        new_fstr = self.empty_function_body(self.module.code_for_node(original_node))
+        self.count += 1
+        function_position = self.get_metadata(libcst.metadata.PositionProvider, original_node).start
+        body_position = self.get_metadata(libcst.metadata.PositionProvider, original_node.body).start
+        function_defition_length = body_position.line - function_position.line
+        # print(original_node.name.value, '\t', function_defition_length, '\t', function_position.line)
+        new_fstr = self.empty_function_body(self.module.code_for_node(original_node), function_defition_length)
         new_fdef = self.lparser.parse_module(new_fstr).body[0]
-        # print(new_fdef)
         return updated_node.with_changes(body = new_fdef.body)
+        # return updated_node
 
-    def empty_function_body(self, function_str):
-        def_line = 0
+    def empty_function_body(self, function_str, def_lines):
         all_lines = function_str.splitlines()
-        while 'def' not in all_lines[def_line]:
-            def_line += 1
-        new_fstr = all_lines[def_line]
-        new_fstr += '\n\tpass\n'
-        # print(new_fstr)
+        init_position = 0
+        while 'def' not in all_lines[init_position]:
+            init_position += 1
+        function_lines = all_lines[init_position:(init_position + def_lines)]
+        function_lines.append('\tpass\n')
+        new_fstr = "\n".join(function_lines)
         return new_fstr

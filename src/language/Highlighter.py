@@ -12,7 +12,7 @@ class Highlighter:
 
         try:
             formatter = formatters.HtmlFormatter(
-                linenos=linenos,
+                linenos='table',
                 style=style,
                 full=True)
         except pygments.util.ClassNotFound:
