@@ -4,7 +4,7 @@ from language import StructureVisitor
 from language import Highlighter
 # from fpdf import FPDF, HTMLMixin
 # from PyQt5.QtGui import QTextDocument, QPrinter, QApplication
-from weasyprint import HTML
+# from weasyprint import HTML
 import sys
 import pdfkit
 
