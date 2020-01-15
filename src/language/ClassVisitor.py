@@ -8,6 +8,7 @@ class ClassVisitor(libcst.CSTTransformer):
     def __init__(self, module):
         self.module = module
         self.lparser = Parser()
+        self.class_structure = []
 
     # def visit_ClassDef(self, node: libcst.ClassDef):
     #     pos = self.get_metadata(libcst.metadata.PositionProvider, node).start

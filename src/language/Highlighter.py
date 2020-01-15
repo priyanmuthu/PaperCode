@@ -1,7 +1,17 @@
 import pygments
 from pygments import lexers, formatters, styles
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
 
 class Highlighter:
+
+    def highlight_python_file(self, python_code, linenos=True, style='default'):
+        return pygments.highlight(python_code, PythonLexer(), HtmlFormatter(
+                linenos='table',
+                style=style,
+                full=True))
+
+
     def highlight_file(self, input_file, linenos=True, style='default'):
         """ Highlight the input file, and return HTML as a string. """
         try:
