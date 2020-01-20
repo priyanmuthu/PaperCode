@@ -3,6 +3,8 @@ from language import ClassVisitor
 from language import StructureVisitor
 from language import Highlighter
 from language import Node
+from lxml import etree
+from bs4 import BeautifulSoup
 import libcst
 # from fpdf import FPDF, HTMLMixin
 # from PyQt5.QtGui import QTextDocument, QPrinter, QApplication
@@ -80,10 +82,25 @@ def get_references(source_code, file_path):
     # print(script.goto_definitions()[0].line, script.goto_definitions()[0].column)
     print(script.usages())
 
+def get_html_table(html_code):
+    # table = etree.HTML(html_code).find("body/table")
+    # print(table)
+    # print(etree.tostring(table))
+    soup = BeautifulSoup(html_code, 'html.parser')
+    res = soup.find('table')
+    td_line_nos = res.find('td')
+    td_code = td_line_nos.find_next_sibling()
+    highlight_div = soup.find('div', {'class':'highlight'})
+    preformated_text = highlight_div.find('pre')
+    # td_code.
+    # td_code = td_line_nos.find_add_next(td_line_nos)
+    print(preformated_text)
+
 def main():
     file_path = 'src/temp/temp2.py'
     source_code = text_from_file(file_path)
-    print(highlight(source_code))
+    html_code = highlight(source_code)
+    get_html_table(html_code)
     # code_structure = get_code_structure(source_code) 
     # code_structure = get_better_code_structure(source_code) 
     # html_code = highlight(code_structure)
