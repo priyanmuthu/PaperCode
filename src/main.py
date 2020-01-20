@@ -2,11 +2,14 @@ from language import parser
 from language import ClassVisitor
 from language import StructureVisitor
 from language import Highlighter
+from language import Node
+import libcst
 # from fpdf import FPDF, HTMLMixin
 # from PyQt5.QtGui import QTextDocument, QPrinter, QApplication
 # from weasyprint import HTML
 import sys
 import pdfkit
+import jedi
 
 def text_from_file(file_path):
     f = open(file_path, 'r')
@@ -22,7 +25,7 @@ def get_code_structure(source_code):
     p = parser.Parser()
     wrapper = p.parse_module_with_metadata(source_code)
     visited_tree = wrapper.visit(ClassVisitor.ClassVisitor(wrapper.module))
-    # print(wrapper.module.code)
+    # print(wrapper.module)
     return visited_tree.code
 
 def get_better_code_structure(source_code):
@@ -40,18 +43,6 @@ def get_better_code_structure(source_code):
     return structure_code
 
 def generate_pdf(html_text, pdf_file_path):
-    # app = QApplication(sys.argv)
-    # doc = QTextDocument()
-    # doc.setHtml(html_text)
-
-    # printer = QPrinter()
-    # printer.setOutputFileName(pdf_file_path)
-    # printer.setOutputFormat(QPrinter.PdfFormat)
-    # printer.setPageSize(QPrinter.A4);
-    # printer.setPageMargins (15,15,15,15,QPrinter.Millimeter);
-    # doc.print_(printer)
-    # html = HTML('temp/high.html')
-    # html.write_pdf(pdf_file_path)
     options = {
         'page-size': 'A4',
         'margin-top': '0.75in',
@@ -61,12 +52,47 @@ def generate_pdf(html_text, pdf_file_path):
     }
     pdfkit.from_string(html_text, pdf_file_path, options=options)
 
+def generate_syntax_tree(source_code):
+    p = parser.Parser()
+    wrapper = p.parse_module_with_metadata(source_code)
+    structure_visitor = StructureVisitor.StructureVisitor(wrapper)
+    wrapper.visit(structure_visitor)
+    print_syntax_tree(structure_visitor.syntax_tree)
+    # print(wrapper.module)
+    # traverse_cst_and_find_call(structure_visitor.syntax_tree.children[0].children[1].cst_node)
+
+def print_syntax_tree(tree_node):
+    tree_node.print()
+    for child in tree_node.children:
+        print_syntax_tree(child)
+
+def traverse_cst_and_find_call(cst_node, call_nodes = []):
+    print(type(cst_node))
+    if(type(cst_node) == libcst._nodes.expression.Call):
+        print(cst_node)
+    for child in cst_node.children:
+        traverse_cst_and_find_call(child)
+
+def get_references(source_code, file_path):
+    script = jedi.Script(source=source_code, path=file_path, line=3, column=8)
+    # print(script.goto_definitions())
+    # print(script.goto_definitions()[0], type(script.goto_definitions()[0]))
+    # print(script.goto_definitions()[0].line, script.goto_definitions()[0].column)
+    print(script.usages())
+
 def main():
-    source_code = text_from_file('temp/fpdf.py')
-    code_structure = get_code_structure(source_code) 
-    html_code = highlight(code_structure)
-    # print(html_code)
-    generate_pdf(html_code, 'temp/gen.pdf')
+    file_path = 'src/temp/temp2.py'
+    source_code = text_from_file(file_path)
+    print(highlight(source_code))
+    # code_structure = get_code_structure(source_code) 
+    # code_structure = get_better_code_structure(source_code) 
+    # html_code = highlight(code_structure)
+    # # # print(html_code)
+    # generate_pdf(html_code, 'temp/gen2.pdf')
+    # generate_syntax_tree(source_code)
+    # get_references(source_code, file_path)
+
+
 
 
 if __name__ == "__main__":
