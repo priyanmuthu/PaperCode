@@ -9,28 +9,33 @@ class Node(object):
 
 
 class ClassNode(Node):
-    def __init__(self, cst_node, parent_node, name, def_start_line, def_end_line):
+    def __init__(self, cst_node, parent_node, name, start_pos, end_pos, body_start_pos, body_end_pos):
         super().__init__(cst_node, parent_node)
         self.name = name
-        self.def_start_line = def_start_line
-        self.def_end_line = def_end_line
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.body_start_pos = body_start_pos
+        self.body_end_pos = body_end_pos
     
     def print(self):
         print('ClassNode: ', self.name, 'Parent: ', type(self.parent_node), ' Children: ', len(self.children))
 
 
 class FunctionNode(Node):
-    def __init__(self, cst_node, parent_node, name, def_start_line, def_end_line):
+    def __init__(self, cst_node, parent_node, name, start_pos, end_pos, body_start_pos, body_end_pos):
         super().__init__(cst_node, parent_node)
         self.name = name
-        self.def_start_line = def_start_line
-        self.def_end_line = def_end_line
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.body_start_pos = body_start_pos
+        self.body_end_pos = body_end_pos
 
     def print(self):
         print('FunctionNode: ', self.name, 'Parent: ', type(self.parent_node), ' Children: ', len(self.children))
 
 class CallNode(Node):
     def __init__(self, cst_node, parent_node, func, line, col):
+        # todo: change line, col to start and end position
         super().__init__(cst_node, parent_node)
         self.func = func
         self.line = line

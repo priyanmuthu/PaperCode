@@ -14,9 +14,18 @@ class StructureVisitor(libcst.CSTTransformer):
         self.current_parent_node = self.syntax_tree
 
     def visit_ClassDef(self, node: libcst.ClassDef):
-        class_position = self.get_metadata(libcst.metadata.PositionProvider, node).start.line
-        body_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).start.line
-        class_node = ClassNode(node, self.current_parent_node, node.name.value, class_position, body_postition - 1)
+        class_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
+        class_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
+        body_start_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).start
+        body_end_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).end
+        class_node = ClassNode(
+            node, 
+            self.current_parent_node, 
+            node.name.value, 
+            class_start_position, 
+            class_end_position, 
+            body_start_postition, 
+            body_end_postition)
         self.current_parent_node.children.append(class_node)
         self.current_parent_node = class_node
         return True
@@ -27,9 +36,18 @@ class StructureVisitor(libcst.CSTTransformer):
     
     
     def visit_FunctionDef(self, node: libcst.FunctionDef):
-        function_position = self.get_metadata(libcst.metadata.PositionProvider, node).start.line
-        body_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).start.line
-        func_node = FunctionNode(node, self.current_parent_node, node.name.value, function_position, body_postition - 1)
+        function_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
+        function_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
+        body_start_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).start
+        body_end_postition = self.get_metadata(libcst.metadata.PositionProvider, node.body).end
+        func_node = FunctionNode(
+            node, 
+            self.current_parent_node, 
+            node.name.value, 
+            function_start_position, 
+            function_end_position, 
+            body_start_postition, 
+            body_end_postition)
         self.current_parent_node.children.append(func_node)
         self.current_parent_node = func_node
         return True
@@ -42,7 +60,4 @@ class StructureVisitor(libcst.CSTTransformer):
         call_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
         call_node = CallNode(node, self.current_parent_node, node.func, call_position.line, call_position.column)
         self.current_parent_node.children.append(call_node)
-        # print(node)
-        print(self.wrapper.resolve(libcst.metadata.QualifiedNameProvider)[node])
-        # print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         return False
