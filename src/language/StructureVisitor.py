@@ -10,7 +10,12 @@ class StructureVisitor(libcst.CSTTransformer):
         self.wrapper = wrapper
         self.module = self.wrapper.module
         self.lparser = Parser()
-        self.syntax_tree = Node(self.module)
+        
+
+    def visit_Module(self, node: libcst.Module):
+        module_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
+        module_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
+        self.syntax_tree = Node(self.module, module_start_position, module_end_position, None)
         self.current_parent_node = self.syntax_tree
 
     def visit_ClassDef(self, node: libcst.ClassDef):
@@ -57,7 +62,8 @@ class StructureVisitor(libcst.CSTTransformer):
         return original_node
 
     def visit_Call(self, node):
-        call_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
-        call_node = CallNode(node, self.current_parent_node, node.func, call_position.line, call_position.column)
+        call_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
+        call_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
+        call_node = CallNode(node, self.current_parent_node, node.func, call_start_position, call_end_position)
         self.current_parent_node.children.append(call_node)
         return False
