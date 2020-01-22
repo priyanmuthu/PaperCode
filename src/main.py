@@ -5,6 +5,8 @@ from language import Highlighter
 from language import Node
 from lxml import etree
 from bs4 import BeautifulSoup
+from pyppeteer import launch
+import asyncio
 import libcst
 # from fpdf import FPDF, HTMLMixin
 # from PyQt5.QtGui import QTextDocument, QPrinter, QApplication
@@ -19,7 +21,7 @@ class PaperOptions:
         self.max_lines = max_lines
 
 print_paper = {
-    'a4': PaperOptions('a4', '60')
+    'A4': PaperOptions('A4', '100')
 }
 
 def text_from_file(file_path):
@@ -126,51 +128,42 @@ def get_html_from_partitions(html_template_path, source_code, partitions):
     for p in partitions:
         # print(p)
         _, code_p = get_pre_formated_text(p)
-        pcode = '\n'.join(str(code_p).splitlines()[:p['length']])
+        pcode = str(code_p).splitlines()[:p['length']]
+        pcode = '\n'.join(pcode)
         pcode = pcode.replace('<pre>', '', 1).replace('</pre>', '', 1)
         line_nos.append('\n'.join(str(lno) for lno in p['line_nos']))
         code_lines.append(pcode)
-
-    # preformatted_line = soup.new_tag('pre')
-    # preformatted_line.string = '\n'.join(line_nos)
-    # preformatted_code = soup.new_tag('pre')
-    # preformatted_code.append(BeautifulSoup('\n'.join(code_lines), 'html.parser'))
-    # print(code_lines[2])
-    # print('xxxxxxx')
-    # print(line_nos[2])
-    # print('xxxxxxx')
-    # print(partitions[2]['source_code_lines'])
     preformatted_line = '<pre>' + '\n'.join(line_nos) + '</pre>'
     preformatted_code = '<pre>' + '\n'.join(code_lines) + '</pre>'
     line_no_div.append(BeautifulSoup(preformatted_line, 'html.parser'))
     highlight_div.append(BeautifulSoup(preformatted_code, 'html.parser'))
     return soup
-    # line_p, code_p = get_pre_formated_text(partitions[0])
-    # print(line_p)
-    # print(code_p)
 
-    # pass
+async def get_pdf(html_code, pdf_file_path):
+    browser = await launch()
+    page = await browser.newPage()
+    await page.setContent(html_code)
+    await page.pdf({
+        'path': pdf_file_path,
+        'format': 'A4',
+        'printBackground': True,
+        'margin': { 'top': "1cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" }
+    })
+    await browser.close()
 
 def main():
-    file_path = 'src/temp/temp.py'
+    file_path = 'src/temp/fpdf.py'
     template_path = 'src/template.html'
+    pdf_file_path = 'src/temp/pup.pdf'
     source_code = text_from_file(file_path)
-    # html_code = highlight(source_code)
     syntax_tree = generate_syntax_tree(source_code)
     flat_tree = []
     flatten_syntax_tree(syntax_tree, [Node.CallNode], flat_tree)
     partitions = generate_partitions(source_code, flat_tree)
     final = get_html_from_partitions(template_path, source_code, partitions)
-    print(final)
-    # print(html_code)
-    # get_html_table(html_code)
-    # code_structure = get_code_structure(source_code) 
-    # code_structure = get_better_code_structure(source_code) 
-    # html_code = highlight(code_structure)
-    # # # print(html_code)
-    # generate_pdf(html_code, 'temp/gen2.pdf')
-    # print(syntax_tree.cst_node)
-    # get_references(source_code, file_path)
+    final_code = str(final)
+    asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
+    print(final_code)
 
 
 
