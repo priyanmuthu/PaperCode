@@ -21,7 +21,7 @@ class PaperOptions:
         self.max_lines = max_lines
 
 print_paper = {
-    'A4': PaperOptions('A4', '100')
+    'A4': PaperOptions('A4', 96)
 }
 
 def text_from_file(file_path):
@@ -33,18 +33,6 @@ def text_from_file(file_path):
 def highlight(source_code):
     highlighter = Highlighter.Highlighter()
     return highlighter.highlight_python_file(source_code)
-
-
-def generate_pdf(html_text, pdf_file_path):
-    options = {
-        'page-size': 'A4',
-        'margin-top': '0.75in',
-        'margin-right': '0.75in',
-        'margin-bottom': '0.75in',
-        'margin-left': '0.75in',
-    }
-    pdfkit.from_string(html_text, pdf_file_path, options=options)
-
 
 def generate_syntax_tree(source_code):
     p = parser.Parser()
@@ -85,7 +73,7 @@ def get_pre_formated_text(partition):
     line_soup.string = '' + '\n'.join(str(lno) for lno in partition['line_nos'])
     return line_soup, code_preformated_text
 
-def generate_partitions(source_code, flat_tree, paper_options = print_paper['a4']):
+def generate_partitions(source_code, flat_tree, paper_options = print_paper['A4']):
     partitions = []
     all_lines = source_code.splitlines()
     
@@ -118,26 +106,39 @@ def get_partition(all_lines, start_line, end_line):
     source_code_lines = list(map(lambda x: all_lines[x-1], line_nos))
     return {'line_nos': line_nos, 'source_code_lines': source_code_lines, 'length': len(line_nos)}
 
-def get_html_from_partitions(html_template_path, source_code, partitions):
+def generate_html_from_template(html_template_path, line_nos, code_lines):
     template_text = text_from_file(html_template_path)
     soup = BeautifulSoup(template_text, 'html.parser')
     line_no_div = soup.find('div', {'class': 'linenodiv'})
     highlight_div = soup.find('div', {'class': 'highlight'})
-    line_nos = []
-    code_lines = []
-    for p in partitions:
-        # print(p)
-        _, code_p = get_pre_formated_text(p)
-        pcode = str(code_p).splitlines()[:p['length']]
-        pcode = '\n'.join(pcode)
-        pcode = pcode.replace('<pre>', '', 1).replace('</pre>', '', 1)
-        line_nos.append('\n'.join(str(lno) for lno in p['line_nos']))
-        code_lines.append(pcode)
     preformatted_line = '<pre>' + '\n'.join(line_nos) + '</pre>'
     preformatted_code = '<pre>' + '\n'.join(code_lines) + '</pre>'
     line_no_div.append(BeautifulSoup(preformatted_line, 'html.parser'))
     highlight_div.append(BeautifulSoup(preformatted_code, 'html.parser'))
-    return soup
+    return str(soup)
+
+def get_html_from_partitions(html_template_path, source_code, partitions, paper_options):
+    line_nos = []
+    code_lines = []
+    pages = []
+    line_count = 0
+    for p in partitions:
+        if (line_count + p['length']) >= paper_options.max_lines and (paper_options.max_lines - line_count) < paper_options.max_lines/2:
+            remaining_lines = paper_options.max_lines - line_count
+            empty_str = '\n'.join('' for i in range(remaining_lines)) + '<p style="page-break-before: always"></p>'
+            line_nos.append(empty_str)
+            code_lines.append(empty_str)
+            line_count = 0
+        _, code_p = get_pre_formated_text(p)
+        pcode = str(code_p).splitlines()[:p['length']]
+        pcode = '\n'.join(pcode)
+        pcode = pcode.replace('<pre>', '', 1).replace('</pre>', '', 1)
+        line_str = '\n'.join(str(lno) for lno in p['line_nos'])
+        line_nos.append(line_str)
+        code_lines.append(pcode)
+        line_count += p['length']
+    return generate_html_from_template(html_template_path, line_nos, code_lines)
+    
 
 async def get_pdf(html_code, pdf_file_path):
     browser = await launch()
@@ -160,8 +161,7 @@ def main():
     flat_tree = []
     flatten_syntax_tree(syntax_tree, [Node.CallNode], flat_tree)
     partitions = generate_partitions(source_code, flat_tree)
-    final = get_html_from_partitions(template_path, source_code, partitions)
-    final_code = str(final)
+    final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
     asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
     print(final_code)
 
