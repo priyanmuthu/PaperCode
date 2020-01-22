@@ -6,6 +6,8 @@ from language import Node
 from lxml import etree
 from bs4 import BeautifulSoup
 from pyppeteer import launch
+from PyPDF2 import PdfFileWriter, PdfFileReader
+import math
 import asyncio
 import libcst
 # from fpdf import FPDF, HTMLMixin
@@ -152,6 +154,20 @@ async def get_pdf(html_code, pdf_file_path):
     })
     await browser.close()
 
+def generate_pdf_two_page_layout(pdf_file_path, out_path):
+    input1 = PdfFileReader(open(pdf_file_path, "rb"))
+    output = PdfFileWriter()
+    for iter in range (0, input1.getNumPages()-1, 2):
+        lhs = input1.getPage(iter)
+        rhs = input1.getPage(iter+1)
+        lhs.mergeTranslatedPage(rhs, lhs.mediaBox.getUpperRight_x(),0, True)
+        output.addPage(lhs)
+        sys.stdout.flush()
+
+    # print("writing " + sys.argv[2])
+    outputStream = open(out_path, "wb")
+    output.write(outputStream)
+
 def main():
     file_path = 'src/temp/fpdf.py'
     template_path = 'src/template.html'
@@ -163,7 +179,8 @@ def main():
     partitions = generate_partitions(source_code, flat_tree)
     final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
     asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
-    print(final_code)
+    generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
+    # print(final_code)
 
 
 
