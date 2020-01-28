@@ -64,6 +64,17 @@ class StructureVisitor(libcst.CSTTransformer):
     def visit_Call(self, node):
         call_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
         call_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
-        call_node = CallNode(node, self.current_parent_node, node.func, call_start_position, call_end_position)
-        self.current_parent_node.children.append(call_node)
+        # Get more info about the function
+        func_cst = node.func
+        if type(func_cst) is libcst._nodes.expression.Attribute:
+            # Get the location of the attribute
+            ref_start_position = self.get_metadata(libcst.metadata.PositionProvider, func_cst.attr).start
+        else:
+            ref_start_position = self.get_metadata(libcst.metadata.PositionProvider, func_cst).start
+
+        call_node = CallNode(node, self.current_parent_node, node.func, call_start_position, call_end_position, ref_start_position)
+        if type(self.current_parent_node) is FunctionNode:
+            self.current_parent_node.function_calls.append(call_node)
+        else:
+            self.current_parent_node.children.append(call_node)
         return False

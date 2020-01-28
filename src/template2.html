@@ -27,9 +27,23 @@ Licensed under the BSD license, see LICENSE for details.
     content: counter(page);
   }
 }
-td.linenos { background-color: #f0f0f0; padding-right: 10px; }
+.container{
+    display: flex;
+}
+.leftdiv{
+    width: 700px;
+}
+.rightdiv{
+    flex-grow: 1;
+}
+table{
+  table-layout: fixed;
+}
+td.linenos { background-color: #f0f0f0; padding-left: 5px; padding-right: 5px; text-align: right; }
+tr {page-break-inside: avoid; vertical-align: top;}
 span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
-pre { line-height: 125%; }
+pre { line-height: 125%; margin: 0px;}
+.right pre { overflow: hidden; max-width: 600px;}
 body .hll { background-color: #ffffff }
 body  { background: #ffffff; }
 body .c { color: #408080; font-style: italic } /* Comment */
@@ -103,9 +117,15 @@ body .il { color: #666666 } /* Literal.Number.Integer.Long */
   </style>
 </head>
 <body>
-<h2></h2>
-
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"></div></td><td class="code" style="word-break:break-all;"><div class="highlight"></div>
-</td></tr></table></body>
+  <div class="container">
+    <div class="rightdiv">
+      <table class="highlighttable"></table>
+    </div>
+    <div class="leftdiv">
+      
+    </div>
+  </div>
+  
+</body>
 </html>
 

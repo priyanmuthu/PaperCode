@@ -39,6 +39,9 @@ def print_syntax_tree(tree_node):
     for child in tree_node.children:
         print_syntax_tree(child)
 
+def isBlank (myString):
+    return not (myString and myString.strip())
+
 def generate_partitions(source_code, flat_tree, paper_options = print_paper['A4']):
     partitions = []
     all_lines = source_code.splitlines()

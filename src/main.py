@@ -37,7 +37,7 @@ def get_pre_formated_text(partition):
     #generating line_preformated_text
     line_soup = soup.new_tag('pre')
     line_soup.string = '' + '\n'.join(str(lno) for lno in partition['line_nos'])
-    return line_soup, code_preformated_text
+    return line_soup, str(code_preformated_text)
 
 def generate_html_from_template(html_template_path, line_nos, code_lines):
     template_text = text_from_file(html_template_path)
@@ -51,26 +51,40 @@ def generate_html_from_template(html_template_path, line_nos, code_lines):
     return str(soup)
 
 def get_html_from_partitions(html_template_path, source_code, partitions, paper_options):
-    line_nos = []
-    code_lines = []
-    pages = []
-    line_count = 0
+    template_text = text_from_file(html_template_path)
+    soup = BeautifulSoup(template_text, 'html.parser')
+    highlight_table = soup.find('table', {'class': 'highlighttable'})
     for p in partitions:
-        if (line_count + p['length']) >= paper_options.max_lines and (paper_options.max_lines - line_count) < paper_options.max_lines/2:
-            remaining_lines = paper_options.max_lines - line_count
-            empty_str = '\n'.join('' for i in range(remaining_lines)) + '<p style="page-break-before: always"></p>'
-            line_nos.append(empty_str)
-            code_lines.append(empty_str)
-            line_count = 0
         _, code_p = get_pre_formated_text(p)
-        pcode = str(code_p).splitlines()[:p['length']]
+        pcode = code_p.splitlines()[:p['length']]
         pcode = '\n'.join(pcode)
-        pcode = pcode.replace('<pre>', '', 1).replace('</pre>', '', 1)
-        line_str = '\n'.join(str(lno) for lno in p['line_nos'])
-        line_nos.append(line_str)
-        code_lines.append(pcode)
-        line_count += p['length']
-    return generate_html_from_template(html_template_path, line_nos, code_lines)
+        line_str = '<pre>' + '\n'.join(str(lno) for lno in p['line_nos']) + '</pre>'
+        # Generating the table row
+        line_no_div = soup.new_tag('div')
+        line_no_div['class'] = ['linenodiv']
+        line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
+
+        line_table_data = soup.new_tag('td')
+        line_table_data['class'] = ['linenos']
+        line_table_data.append(line_no_div)
+
+
+        highlight_div = soup.new_tag('div')
+        highlight_div['class'] = ['highlight']
+        highlight_div.append(BeautifulSoup(pcode, 'html.parser'))
+
+        code_table_data = soup.new_tag('td')
+        code_table_data['class'] = ['code']
+        code_table_data.append(highlight_div)
+
+        table_row = soup.new_tag('tr')
+        table_row.append(line_table_data)
+        table_row.append(code_table_data)
+
+        highlight_table.append(table_row)
+        
+        
+    return str(soup)
     
 
 async def get_pdf(html_code, pdf_file_path):
@@ -114,9 +128,7 @@ def main():
     final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
     asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
     # generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
-    # print(final_code)
-
-
+    print(final_code)
 
 
 if __name__ == "__main__":

@@ -27,15 +27,17 @@ class FunctionNode(Node):
         self.name = name
         self.body_start_pos = body_start_pos
         self.body_end_pos = body_end_pos
+        self.function_calls = []
 
     def print(self):
         print('FunctionNode: ', self.name, 'Parent: ', type(self.parent_node), ' Children: ', len(self.children))
 
 class CallNode(Node):
-    def __init__(self, cst_node, parent_node, func, start_pos, end_pos):
+    def __init__(self, cst_node, parent_node, func, start_pos, end_pos, ref_pos):
         # todo: change line, col to start and end position
         super().__init__(cst_node, start_pos, end_pos, parent_node)
         self.func = func
+        self.ref_pos = ref_pos
 
     def print(self):
-        print('CallNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.line, ',', self.col, ') ', ' Children: ', len(self.children))
+        print('CallNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.start_pos, ',', self.end_pos, ') ', ' Children: ', len(self.children))
