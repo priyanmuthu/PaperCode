@@ -3,6 +3,7 @@ from language import StructureVisitor
 from language import Highlighter
 from language import Node
 from bs4 import BeautifulSoup
+import jedi
 
 class PaperOptions:
     def __init__(self, paper_size, max_lines):
@@ -19,11 +20,35 @@ def text_from_file(file_path):
     f.close()
     return file_text
 
-def generate_syntax_tree(source_code):
+def post_process_syntax_tree(source_code: str, file_path: str, syntax_tree: Node.Node):
+    functions = []
+    flatten_syntax_tree(syntax_tree, [Node.Node, Node.ClassNode, Node.CallNode], functions)
+    script = jedi.Script(source=source_code, path=file_path)
+    function_line_dict = {f.start_pos.line : f for f in functions}
+    # print(function_line_dict)
+    for func in functions:
+        if type(func) is not Node.FunctionNode:
+            continue
+        # get all the calls and point it to the actual function
+        calls = func.function_calls
+        for fc in calls:
+            # Get the function call location and find the function node
+            func_defs = script.goto(fc.ref_pos.line, fc.ref_pos.column)
+            if len(func_defs) == 0:
+                continue
+            
+            if func_defs[0].line not in function_line_dict:
+                continue
+            qf = function_line_dict[func_defs[0].line]
+            fc.function_node = qf
+            qf.refs.append(fc)
+
+def generate_syntax_tree(source_code, file_path):
     p = parser.Parser()
     wrapper = p.parse_module_with_metadata(source_code)
     structure_visitor = StructureVisitor.StructureVisitor(wrapper)
     wrapper.visit(structure_visitor)
+    post_process_syntax_tree(source_code, file_path, structure_visitor.syntax_tree)
     return structure_visitor.syntax_tree
 
 def flatten_syntax_tree(tree_node, filter_types = [], flat_tree = []):

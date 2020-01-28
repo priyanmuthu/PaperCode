@@ -255,3 +255,12 @@ def get_html_from_partitions(html_template_path, source_code, partitions, paper_
         code_lines.append(pcode)
         line_count += p['length']
     return generate_html_from_template(html_template_path, line_nos, code_lines)
+
+    def get_references(source_code, file_path):
+        script = jedi.Script(source=source_code, path=file_path, line=47, column=9)
+        # print(script.goto_definitions()[0].line)
+        # print(script.goto_definitions()[0], type(script.goto_definitions()[0]))
+        # print(script.goto_definitions()[0].line, script.goto_definitions()[0].column)
+        uses = script.usages()
+        for u in uses:
+            print(u, u.line, u.column)

@@ -1,5 +1,3 @@
-from language import parser
-from language import StructureVisitor
 from language import Highlighter
 from language import Node
 from Utils import *
@@ -10,21 +8,11 @@ import math
 import asyncio
 import libcst
 import sys
-import jedi
 
 
 def highlight(source_code):
     highlighter = Highlighter.Highlighter()
     return highlighter.highlight_python_file(source_code)
-
-def get_references(source_code, file_path):
-    script = jedi.Script(source=source_code, path=file_path, line=47, column=9)
-    # print(script.goto_definitions()[0].line)
-    # print(script.goto_definitions()[0], type(script.goto_definitions()[0]))
-    # print(script.goto_definitions()[0].line, script.goto_definitions()[0].column)
-    uses = script.usages()
-    for u in uses:
-        print(u, u.line, u.column)
 
 def get_pre_formated_text(partition):
     partition_code = '\n'.join(partition['source_code_lines'])
@@ -116,19 +104,19 @@ def generate_pdf_two_page_layout(pdf_file_path, out_path):
     output.write(outputStream)
 
 def main():
-    file_path = 'src/temp/temp.py'
+    file_path = 'src/temp/fpdf.py'
     template_path = 'src/template2.html'
     pdf_file_path = 'src/temp/pup.pdf'
     source_code = text_from_file(file_path)
     # get_references(source_code, file_path)
-    syntax_tree = generate_syntax_tree(source_code)
-    flat_tree = []
-    flatten_syntax_tree(syntax_tree, [Node.CallNode], flat_tree)
-    partitions = generate_partitions(source_code, flat_tree)
-    final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
-    asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
-    # generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
-    print(final_code)
+    syntax_tree = generate_syntax_tree(source_code, file_path)
+    # flat_tree = []
+    # flatten_syntax_tree(syntax_tree, [Node.CallNode], flat_tree)
+    # partitions = generate_partitions(source_code, flat_tree)
+    # final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
+    # asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
+    # # generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
+    # print(final_code)
 
 
 if __name__ == "__main__":
