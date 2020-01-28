@@ -1,6 +1,7 @@
 from language import Highlighter
 from language import Node
 from Utils import *
+from CodeFile import CodeFile
 from bs4 import BeautifulSoup
 from pyppeteer import launch
 from PyPDF2 import PdfFileWriter, PdfFileReader
@@ -107,16 +108,13 @@ def main():
     file_path = 'src/temp/fpdf.py'
     template_path = 'src/template2.html'
     pdf_file_path = 'src/temp/pup.pdf'
-    source_code = text_from_file(file_path)
-    # get_references(source_code, file_path)
-    syntax_tree = generate_syntax_tree(source_code, file_path)
-    # flat_tree = []
-    # flatten_syntax_tree(syntax_tree, [Node.CallNode], flat_tree)
-    # partitions = generate_partitions(source_code, flat_tree)
-    # final_code = get_html_from_partitions(template_path, source_code, partitions, print_paper['A4'])
-    # asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
-    # # generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
-    # print(final_code)
+    code_file = CodeFile(file_path)
+    code_file.process()    
+    partitions = code_file.generate_partitions()
+    final_code = get_html_from_partitions(template_path, code_file.source_code, partitions, print_paper['A4'])
+    asyncio.get_event_loop().run_until_complete(get_pdf(final_code, pdf_file_path))
+    # generate_pdf_two_page_layout(pdf_file_path, 'src/temp/pup2.pdf')
+    print(final_code)
 
 
 if __name__ == "__main__":
