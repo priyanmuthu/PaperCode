@@ -1,3 +1,5 @@
+
+Exploration
 ☐ libcst get reference information
     ✔ For every function call - jump to definition @done(20-01-29 13:12)
     ☐ Global/Class variable reference
@@ -5,4 +7,5 @@
 ✔ css print media @done(20-01-29 13:12)
 ☐ python tutor backend test cases
 ☐ Play with iFrame to inject multiple HTML to control layout: <iframe src="left.html" name="left"></iframe>
-☐ 
+☐ Play with table_layout:fixed vs auto - Maybe auto will be better
+☐ Fix how SidebarCodePrinter iterates through node.
