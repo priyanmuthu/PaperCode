@@ -27,6 +27,7 @@ class FunctionNode(Node):
         self.name = name
         self.body_start_pos = body_start_pos
         self.body_end_pos = body_end_pos
+        self.size = self.end_pos.line - self.start_pos.line + 1
         self.function_calls = []
         self.refs = []
 
