@@ -62,6 +62,9 @@ class StructureVisitor(libcst.CSTTransformer):
         return original_node
 
     def visit_Call(self, node):
+        # Not supported, if it is directly in the module
+        if type(self.current_parent_node) is Node:
+            return False
         call_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
         call_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
         # Get more info about the function

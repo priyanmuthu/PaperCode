@@ -33,9 +33,17 @@ class SidebarCodePrinter(CodePrinter):
         flatten_syntax_tree(self.code_file.syntax_tree, [Node.FunctionNode, Node.CallNode], flat_tree)
         partitions = []
 
+        # Parition for the initial module
+        part  = self.code_file.get_partition_from_node(self.code_file.syntax_tree)
+        partitions.append({'base': part, 'sidebar': []})
+
         # Todo what if there are functions before the node?
-        for node in flat_tree:
+        for node in self.code_file.syntax_tree.children:
             if type(node) is Node.Node:
+                part  = self.code_file.get_partition_from_node(node)
+                partitions.append({'base': part, 'sidebar': []})
+                continue
+            elif type(node) is Node.FunctionNode:
                 part  = self.code_file.get_partition_from_node(node)
                 partitions.append({'base': part, 'sidebar': []})
                 continue
