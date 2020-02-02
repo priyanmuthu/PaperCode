@@ -9,7 +9,7 @@ from language import Node
 class SidebarCodePrinter(CodePrinter):
     def __init__(self, pdf_file_path: str, code_file: CodeFile, base_div: BaseDiv, sidebar_div: SidebarDiv):
         super().__init__(pdf_file_path, code_file)
-        self.html_template_path = 'src/templates/sidebar.html'
+        self.html_template_path = 'papercode/templates/sidebar.html'
         self.size_limit = 3
         self.base_div = base_div
         self.sidebar_div = sidebar_div

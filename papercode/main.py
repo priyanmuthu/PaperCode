@@ -5,11 +5,11 @@ from CodePrinter import RegularCodePrinter
 from SidebarCodePrinter import SidebarCodePrinter
 
 def main():
-    # file_path = 'src/temp/temp.py'
-    # file_path = 'src/temp/temp2.py'
-    file_path = 'src/temp/fpdf.py'
-    # template_path = 'src/templates/template2.html'
-    pdf_file_path = 'src/temp/pup.pdf'
+    # file_path = 'papercode/temp/temp.py'
+    # file_path = 'papercode/temp/temp2.py'
+    file_path = 'papercode/temp/fpdf.py'
+    # template_path = 'papercode/templates/template2.html'
+    pdf_file_path = 'papercode/temp/pup.pdf'
     code_file = CodeFile(file_path)
     code_file.process()    
     base_div = EverythingBaseDiv(code_file)

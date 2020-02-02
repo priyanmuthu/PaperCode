@@ -194,7 +194,7 @@ async def get_pdf(html_code):
     page = await browser.newPage()
     await page.setContent(html_code)
     await page.pdf({
-        'path': 'src/temp/pup.pdf',
+        'path': 'papercode/temp/pup.pdf',
         'format': 'A4',
         'printBackground': True,
         'margin': { 'top': "1cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" }
@@ -202,8 +202,8 @@ async def get_pdf(html_code):
     await browser.close()
 
 # def main():
-#     file_path = 'src/temp/fpdf.py'
-#     template_path = 'src/template.html'
+#     file_path = 'papercode/temp/fpdf.py'
+#     template_path = 'papercode/template.html'
 #     source_code = text_from_file(file_path)
 #     # html_code = highlight(source_code)
 #     syntax_tree = generate_syntax_tree(source_code)

@@ -10,7 +10,7 @@ class CodePrinter:
 class RegularCodePrinter(CodePrinter):
     def __init__(self, pdf_file_path: str, code_file: CodeFile):
         super().__init__(pdf_file_path, code_file)
-        self.html_template_path = 'src/templates/template2.html'
+        self.html_template_path = 'papercode/templates/template2.html'
     
     def get_pre_formated_text(self, partition):
         partition_code = '\n'.join(partition['source_code_lines'])
