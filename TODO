@@ -1,0 +1,15 @@
+☐ Exploration
+☐ libcst get reference information
+    ✔ For every function call - jump to definition @done(20-01-29 13:12)
+    ☐ Global/Class variable reference
+✔ css + html to pdf @done(20-01-29 13:12)
+✔ css print media @done(20-01-29 13:12)
+☐ python tutor backend test cases
+☐ Play with iFrame to inject multiple HTML to control layout: <iframe src="left.html" name="left"></iframe>
+☐ Play with table_layout:fixed vs auto - Maybe auto will be better
+☐ Fix class documentation in print.
+☐ Find page numbers for specific lines / constructs
+☐ Observational study - why they do/dont print out code? How can the tool help with that.
+☐ Commits / Diffs / PR
+☐ Page break wrt to indendation depth
+☐ Paper options
