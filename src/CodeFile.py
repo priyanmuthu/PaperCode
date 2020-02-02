@@ -1,14 +1,14 @@
 from language import parser
 from language import StructureVisitor
 from language import Node
-from Utils import *
+from Utils import UtilMethods
 import jedi
 
 class CodeFile:
     def __init__(self, file_path: str, project_path: str = None):
         self.file_path = file_path
         self.project_path = project_path
-        self.source_code = text_from_file(file_path)
+        self.source_code = UtilMethods.text_from_file(file_path)
         self.all_lines = self.source_code.splitlines()
         self.jedi_script = jedi.Script(source=self.source_code, path=self.file_path)
         self.syntax_tree = None
@@ -28,7 +28,7 @@ class CodeFile:
         if self.syntax_tree is None:
             return
         functions = []
-        flatten_syntax_tree(self.syntax_tree, [Node.Node, Node.ClassNode, Node.CallNode], functions)
+        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node.Node, Node.ClassNode, Node.CallNode], functions)
         function_line_dict = {f.start_pos.line : f for f in functions}
         # print(function_line_dict)
         for func in functions:
@@ -48,10 +48,10 @@ class CodeFile:
                 fc.function_node = qf
                 qf.refs.append(fc)
 
-    def generate_partitions(self, paper_options = print_paper['A4']):
+    def generate_partitions(self):
         partitions = []
         flat_tree = []
-        flatten_syntax_tree(self.syntax_tree, [Node.CallNode], flat_tree)
+        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node.CallNode], flat_tree)
         
         if len(flat_tree) == 0:
             return None

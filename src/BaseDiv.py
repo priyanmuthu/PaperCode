@@ -1,4 +1,4 @@
-from Utils import *
+from Utils import UtilMethods
 from language import Node
 from CodeFile import CodeFile
 from bs4 import BeautifulSoup
@@ -57,7 +57,7 @@ class EverythingBaseDiv(BaseDiv):
             # Making the base
             base_part = p['base']
             part_uuid = uuid.uuid4().hex
-            _, code_base = get_pre_formated_text(base_part)
+            _, code_base = UtilMethods.get_pre_formated_text(base_part)
             code_base = code_base.splitlines()[:base_part['length']]
             code_base = '\n'.join(code_base)
             line_str = '<pre>' + '\n'.join(str(lno) for lno in base_part['line_nos']) + '</pre>'

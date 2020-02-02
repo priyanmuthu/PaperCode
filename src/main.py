@@ -1,4 +1,3 @@
-from Utils import *
 from CodeFile import CodeFile
 from BaseDiv import EverythingBaseDiv
 from SidebarDiv import SmallFunctionSidebarDiv
@@ -7,9 +6,9 @@ from SidebarCodePrinter import SidebarCodePrinter
 
 def main():
     # file_path = 'src/temp/temp.py'
-    file_path = 'src/temp/temp2.py'
-    # file_path = 'src/temp/fpdf.py'
-    template_path = 'src/templates/template2.html'
+    # file_path = 'src/temp/temp2.py'
+    file_path = 'src/temp/fpdf.py'
+    # template_path = 'src/templates/template2.html'
     pdf_file_path = 'src/temp/pup.pdf'
     code_file = CodeFile(file_path)
     code_file.process()    

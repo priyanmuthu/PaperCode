@@ -1,4 +1,4 @@
-from Utils import *
+from Utils import UtilMethods
 from bs4 import BeautifulSoup
 from CodeFile import CodeFile
 from CodePrinter import CodePrinter
@@ -17,7 +17,7 @@ class SidebarCodePrinter(CodePrinter):
     def get_html(self):
         # todo: paper options
         # start with the syntax tree
-        template_text = text_from_file(self.html_template_path)
+        template_text = UtilMethods.text_from_file(self.html_template_path)
         soup = BeautifulSoup(template_text, 'html.parser')
         self.base_div.generate_html(soup)
         self.sidebar_div.generate_html(soup)
@@ -25,5 +25,5 @@ class SidebarCodePrinter(CodePrinter):
 
     def print_code_file(self):
         html_code = self.get_html()
-        get_pdf_sync(html_code, self.pdf_file_path)
+        UtilMethods.get_pdf_sync(html_code, self.pdf_file_path)
         return html_code

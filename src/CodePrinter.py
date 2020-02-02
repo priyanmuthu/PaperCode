@@ -1,4 +1,4 @@
-from Utils import *
+from Utils import UtilMethods
 from bs4 import BeautifulSoup
 from CodeFile import CodeFile
 
@@ -14,7 +14,7 @@ class RegularCodePrinter(CodePrinter):
     
     def get_pre_formated_text(self, partition):
         partition_code = '\n'.join(partition['source_code_lines'])
-        partition_html = highlight(partition_code)
+        partition_html = UtilMethods.highlight(partition_code)
         soup = BeautifulSoup(partition_html, 'html.parser')
         res = soup.find('table')
         td_line_nos = res.find('td')
@@ -27,7 +27,7 @@ class RegularCodePrinter(CodePrinter):
 
     def get_html_from_partitions(self):
         # todo: paper options
-        template_text = text_from_file(self.html_template_path)
+        template_text = UtilMethods.text_from_file(self.html_template_path)
         soup = BeautifulSoup(template_text, 'html.parser')
         highlight_table = soup.find('table', {'class': 'highlighttable'})
         partitions = self.code_file.generate_partitions()
@@ -64,5 +64,5 @@ class RegularCodePrinter(CodePrinter):
 
     def print_code_file(self):
         html_code = self.get_html_from_partitions()
-        get_pdf_sync(html_code, self.pdf_file_path)
+        UtilMethods.get_pdf_sync(html_code, self.pdf_file_path)
         return html_code

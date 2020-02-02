@@ -1,4 +1,4 @@
-from Utils import *
+from Utils import UtilMethods
 from BaseDiv import BaseDiv, EverythingBaseDiv
 from language import Node
 from CodeFile import CodeFile
@@ -65,7 +65,7 @@ class SmallFunctionSidebarDiv(SidebarDiv):
     def get_table_for_sidebar(self, soup, partitions):
         side_table = soup.new_tag('table')
         for p in partitions:
-            _, code_p = get_pre_formated_text(p)
+            _, code_p = UtilMethods.get_pre_formated_text(p)
             pcode = code_p.splitlines()[:p['length']]
             pcode = '\n'.join(pcode)
             line_str = '<pre>' + '\n'.join(str(lno) for lno in p['line_nos']) + '</pre>'
