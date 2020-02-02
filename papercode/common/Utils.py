@@ -1,4 +1,4 @@
-from language import Highlighter
+from papercode.language.Highlighter import Highlighter
 from pyppeteer import launch
 from PyPDF2 import PdfFileWriter, PdfFileReader
 from bs4 import BeautifulSoup
@@ -25,7 +25,7 @@ class UtilMethods:
 
     @staticmethod
     def highlight(source_code):
-        highlighter = Highlighter.Highlighter()
+        highlighter = Highlighter()
         return highlighter.highlight_python_file(source_code)
 
     @staticmethod

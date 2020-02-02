@@ -213,7 +213,7 @@ async def get_pdf(html_code):
 #     final = get_html_from_partitions(template_path, source_code, partitions)
 #     final_code = str(final)
 #     asyncio.get_event_loop().run_until_complete(get_pdf(final_code))
-#     # generate_pdf(final_code, 'src/temp/gen2.pdf')
+#     # generate_pdf(final_code, 'papercode/temp/gen2.pdf')
 #     print(final_code)
 #     # print(html_code)
 #     # get_html_table(html_code)

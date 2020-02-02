@@ -1,6 +1,6 @@
 import libcst
-from .parser import Parser
-from .Node import *
+from papercode.language.parser import Parser
+from papercode.language.Node import *
 
 class StructureVisitor(libcst.CSTTransformer):
     METADATA_DEPENDENCIES = (libcst.metadata.PositionProvider, libcst.metadata.QualifiedNameProvider,)

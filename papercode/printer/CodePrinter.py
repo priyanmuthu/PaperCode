@@ -1,6 +1,6 @@
-from Utils import UtilMethods
+from papercode.common.Utils import UtilMethods
 from bs4 import BeautifulSoup
-from CodeFile import CodeFile
+from papercode.printer.CodeFile import CodeFile
 
 class CodePrinter:
     def __init__(self, pdf_file_path: str, code_file: CodeFile):

@@ -1,6 +1,6 @@
-from Utils import UtilMethods
-from language import Node
-from CodeFile import CodeFile
+from papercode.common.Utils import UtilMethods
+from papercode.language import Node
+from papercode.printer.CodeFile import CodeFile
 from bs4 import BeautifulSoup
 import uuid
 

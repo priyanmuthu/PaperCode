@@ -1,7 +1,5 @@
-from language import parser
-from language import StructureVisitor
-from language import Node
-from Utils import UtilMethods
+from papercode.language import parser, StructureVisitor, Node
+from papercode.common.Utils import UtilMethods
 import jedi
 
 class CodeFile:
