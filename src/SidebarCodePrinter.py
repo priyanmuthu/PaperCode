@@ -83,10 +83,6 @@ class SidebarCodePrinter(CodePrinter):
                         }
                     partitions.append(sf_part)
 
-        # print(partitions)
-        # print([bf.name for bf in big_funcs])
-        # print([sf.name for sf in small_funcs.keys()])
-
         for p in partitions:
             # base, side bar : create tables seperately for both
 
