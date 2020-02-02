@@ -1,22 +1,29 @@
+from Utils import *
 from language import Node
 from CodeFile import CodeFile
 from bs4 import BeautifulSoup
+import uuid
 
 class BaseDiv:
-    def __init__(code_file: CodeFile):
+    def __init__(self, code_file: CodeFile):
         self.code_file = code_file
-        self.elements = {}
+        self.elements_line_td = {}
+        self.elements_code_td = {}
+        self.elements_sidebar_td = {}
+    
+    def generate_html(self, soup: BeautifulSoup):
+        pass
 
 class EverythingBaseDiv(BaseDiv):
-    def __init__(code_file: CodeFile):
+    def __init__(self, code_file: CodeFile):
         super().__init__(code_file)
-        self.elements = {}
+        self.elements_line_td = {}
+        self.elements_code_td = {}
+        self.elements_sidebar_td = {}
     
-    def generate_html(soup: BeautifulSoup):
+    def generate_html(self, soup: BeautifulSoup):
         # Given soup, Insert the main table
         highlight_table = soup.find('table', {'class': 'highlighttable'})
-        flat_tree = []
-        flatten_syntax_tree(self.code_file.syntax_tree, [Node.FunctionNode, Node.CallNode], flat_tree)
         partitions = []
 
         # Parition for the initial module
@@ -49,7 +56,8 @@ class EverythingBaseDiv(BaseDiv):
 
             # Making the base
             base_part = p['base']
-            _, code_base = self.get_pre_formated_text(base_part)
+            part_uuid = uuid.uuid4().hex
+            _, code_base = get_pre_formated_text(base_part)
             code_base = code_base.splitlines()[:base_part['length']]
             code_base = '\n'.join(code_base)
             line_str = '<pre>' + '\n'.join(str(lno) for lno in base_part['line_nos']) + '</pre>'
@@ -61,6 +69,8 @@ class EverythingBaseDiv(BaseDiv):
             
             # Generating the line no td
             line_table_data = soup.new_tag('td')
+            self.elements_line_td[p['node']] = part_uuid + '-line'
+            line_table_data['id'] = self.elements_line_td[p['node']]
             line_table_data['class'] = ['linenos']
             line_table_data.append(line_no_div)
 
@@ -71,14 +81,18 @@ class EverythingBaseDiv(BaseDiv):
 
             # Generating the code td
             code_table_data = soup.new_tag('td')
+            self.elements_code_td[p['node']] = part_uuid + '-code'
+            code_table_data['id'] = self.elements_code_td[p['node']]
             code_table_data['class'] = ['code']
             code_table_data.append(highlight_div)
 
             # Generating the side bar table
-            side_table = self.get_table_for_sidebar(soup, p['sidebar'])
+            # side_table = self.get_table_for_sidebar(soup, p['sidebar'])
             sidebar_table_data = soup.new_tag('td')
+            self.elements_sidebar_td[p['node']] = part_uuid + '-sidebar'
+            sidebar_table_data['id'] = self.elements_sidebar_td[p['node']]
             sidebar_table_data['class'] = ['sidebar']
-            sidebar_table_data.append(side_table)
+            # sidebar_table_data.append(side_table)
 
             table_row = soup.new_tag('tr')
             table_row.append(line_table_data)
@@ -86,5 +100,3 @@ class EverythingBaseDiv(BaseDiv):
             table_row.append(sidebar_table_data)
 
             highlight_table.append(table_row)
-            
-        return str(soup)

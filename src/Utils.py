@@ -1,6 +1,7 @@
 from language import Highlighter
 from pyppeteer import launch
 from PyPDF2 import PdfFileWriter, PdfFileReader
+from bs4 import BeautifulSoup
 import asyncio
 
 class PaperOptions:
@@ -68,3 +69,16 @@ async def get_pdf(html_code, pdf_file_path):
 
 def get_pdf_sync(html_code, pdf_file_path):
     asyncio.get_event_loop().run_until_complete(get_pdf(html_code, pdf_file_path))
+
+def get_pre_formated_text(partition):
+    partition_code = '\n'.join(partition['source_code_lines'])
+    partition_html = highlight(partition_code)
+    soup = BeautifulSoup(partition_html, 'html.parser')
+    res = soup.find('table')
+    td_line_nos = res.find('td')
+    td_code = td_line_nos.find_next_sibling()
+    code_preformated_text = td_code.find('pre')
+    #generating line_preformated_text
+    line_soup = soup.new_tag('pre')
+    line_soup.string = '' + '\n'.join(str(lno) for lno in partition['line_nos'])
+    return line_soup, str(code_preformated_text)
