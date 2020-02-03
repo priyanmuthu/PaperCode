@@ -93,3 +93,56 @@ class SmallFunctionSidebarDiv(SidebarDiv):
 
             side_table.append(table_row)
         return side_table
+
+class ReferencesSidebarDiv(SidebarDiv):
+    def __init__(self, base_div: BaseDiv, code_file: CodeFile, refs_limit: int):
+        super().__init__(base_div, code_file)
+        self.refs_limit = refs_limit
+    
+    def generate_html(self, soup: BeautifulSoup):
+        sidebar_dict = {}
+        for cnode in self.code_file.syntax_tree.children:
+            if type(cnode) is Node:
+                continue
+            elif type(cnode) is FunctionNode:
+                continue
+            elif type(cnode) is ClassNode:
+                # for each function, do something
+                functions = [n for n in cnode.children if type(n) is FunctionNode]
+                # For all the functions, print the references
+                for bf in functions:
+                    function_refs = bf.refs
+                    if len(function_refs) == 0:
+                        continue
+                    rlimit = min(bf.size, self.refs_limit) 
+                    f_part = {
+                        'func': bf, 
+                        'calls': function_refs[:rlimit], 
+                        'more': (rlimit < len(function_refs))
+                        }
+                    sidebar_dict[bf] = f_part
+        
+        # Append HTML
+        for bf in sidebar_dict.keys():
+            if bf not in self.base_div.elements_sidebar_td:
+                continue
+            bf_uuid = self.base_div.elements_sidebar_td[bf]
+            sidebar_td = soup.find('td', {'id': bf_uuid})
+            sidebar_td.append(self.get_sidebar_html(soup, sidebar_dict[bf]))
+    
+    def get_sidebar_html(self, soup: BeautifulSoup, partition):
+        sidebar_div = soup.new_tag('div')
+        sidebar_div['class'] = ['highlight']
+
+        # function call to string
+        call_strings = []
+
+        for call in partition['calls']:
+            cstr = 'Call at ' + call.from_function_node.name + ', line: ' + str(call.start_pos.line)
+            call_strings.append(cstr)
+        if partition['more']:
+            call_strings.append('more...')
+        sidebar_pre = soup.new_tag('pre')
+        sidebar_pre.string = '\n'.join(call_strings)
+        sidebar_div.append(sidebar_pre)
+        return sidebar_div

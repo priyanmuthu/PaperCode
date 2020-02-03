@@ -45,6 +45,7 @@ class CodeFile:
                     continue
                 qf = function_line_dict[func_defs[0].line]
                 fc.function_node = qf
+                fc.from_function_node = func
                 qf.refs.append(fc)
 
     def generate_partitions(self):

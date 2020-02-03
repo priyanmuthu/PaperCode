@@ -41,6 +41,7 @@ class CallNode(Node):
         self.func = func
         self.ref_pos = ref_pos
         self.function_node = None
+        self.from_function_node = None
 
     def print(self):
         print('CallNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.start_pos, ',', self.end_pos, ') ', ' Children: ', len(self.children))
