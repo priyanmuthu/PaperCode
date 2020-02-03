@@ -1,6 +1,6 @@
-from papercode.common.Utils import UtilMethods
-from papercode.language import Node
-from papercode.printer.CodeFile import CodeFile
+from papercode.common.utils import UtilMethods
+from papercode.language.node import Node, ClassNode, FunctionNode
+from papercode.printer.code_file import CodeFile
 from bs4 import BeautifulSoup
 import uuid
 
@@ -31,20 +31,20 @@ class EverythingBaseDiv(BaseDiv):
         partitions.append({'base': part, 'node': self.code_file.syntax_tree})
 
         # Todo what if there are functions before the node?
-        for node in self.code_file.syntax_tree.children:
-            if type(node) is Node.Node:
-                part  = self.code_file.get_partition_from_node(node)
-                partitions.append({'base': part, 'node': node})
+        for cnode in self.code_file.syntax_tree.children:
+            if type(cnode) is Node:
+                part  = self.code_file.get_partition_from_node(cnode)
+                partitions.append({'base': part, 'node': cnode})
                 continue
-            elif type(node) is Node.FunctionNode:
-                part  = self.code_file.get_partition_from_node(node)
-                partitions.append({'base': part, 'node': node})
+            elif type(cnode) is FunctionNode:
+                part  = self.code_file.get_partition_from_node(cnode)
+                partitions.append({'base': part, 'node': cnode})
                 continue
-            elif type(node) is Node.ClassNode:
-                part  = self.code_file.get_partition_from_node(node)
-                partitions.append({'base': part, 'node': node})
+            elif type(cnode) is ClassNode:
+                part  = self.code_file.get_partition_from_node(cnode)
+                partitions.append({'base': part, 'node': cnode})
                 # for each function, do something
-                functions = [n for n in node.children if type(n) is Node.FunctionNode]
+                functions = [n for n in cnode.children if type(n) is FunctionNode]
 
                 # go through all the bif functions
                 for bf in functions:

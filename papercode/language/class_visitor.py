@@ -1,5 +1,5 @@
 import libcst
-from .parser import Parser
+from papercode.language.parser import Parser
 
 class ClassVisitor(libcst.CSTTransformer):
     METADATA_DEPENDENCIES = (libcst.metadata.PositionProvider,)

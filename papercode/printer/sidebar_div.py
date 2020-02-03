@@ -1,7 +1,7 @@
-from papercode.common.Utils import UtilMethods
-from papercode.printer.BaseDiv import BaseDiv, EverythingBaseDiv
-from papercode.language import Node
-from papercode.printer.CodeFile import CodeFile
+from papercode.common.utils import UtilMethods
+from papercode.printer.base_div import BaseDiv, EverythingBaseDiv
+from papercode.language.node import Node, ClassNode, FunctionNode
+from papercode.printer.code_file import CodeFile
 from bs4 import BeautifulSoup
 import uuid
 
@@ -26,14 +26,14 @@ class SmallFunctionSidebarDiv(SidebarDiv):
             return
         # Get all the small functions and add beside the big functions
         sidebar_dict = {}
-        for node in self.code_file.syntax_tree.children:
-            if type(node) is Node.Node:
+        for cnode in self.code_file.syntax_tree.children:
+            if type(cnode) is Node:
                 continue
-            elif type(node) is Node.FunctionNode:
+            elif type(cnode) is FunctionNode:
                 continue
-            elif type(node) is Node.ClassNode:
+            elif type(cnode) is ClassNode:
                 # for each function, do something
-                functions = [n for n in node.children if type(n) is Node.FunctionNode]
+                functions = [n for n in cnode.children if type(n) is FunctionNode]
 
                 big_funcs = [f for f in functions if f.size > self.size_limit]
 

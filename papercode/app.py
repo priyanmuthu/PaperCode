@@ -1,8 +1,8 @@
-from papercode.printer.CodeFile import CodeFile
-from papercode.printer.BaseDiv import EverythingBaseDiv
-from papercode.printer.SidebarDiv import SmallFunctionSidebarDiv
-from papercode.printer.CodePrinter import RegularCodePrinter
-from papercode.printer.SidebarCodePrinter import SidebarCodePrinter
+from papercode.printer.code_file import CodeFile
+from papercode.printer.base_div import EverythingBaseDiv
+from papercode.printer.sidebar_div import SmallFunctionSidebarDiv
+from papercode.printer.code_printer import RegularCodePrinter
+from papercode.printer.sidebar_code_printer import SidebarCodePrinter
 
 def run():
     # file_path = 'papercode/temp/temp.py'

@@ -1,10 +1,9 @@
-from papercode.common.Utils import UtilMethods
+from papercode.common.utils import UtilMethods
 from bs4 import BeautifulSoup
-from papercode.printer.CodeFile import CodeFile
-from papercode.printer.CodePrinter import CodePrinter
-from papercode.printer.BaseDiv import BaseDiv
-from papercode.printer.SidebarDiv import SidebarDiv
-from papercode.language import Node
+from papercode.printer.code_file import CodeFile
+from papercode.printer.code_printer import CodePrinter
+from papercode.printer.base_div import BaseDiv
+from papercode.printer.sidebar_div import SidebarDiv
 
 class SidebarCodePrinter(CodePrinter):
     def __init__(self, pdf_file_path: str, code_file: CodeFile, base_div: BaseDiv, sidebar_div: SidebarDiv):

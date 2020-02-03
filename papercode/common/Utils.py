@@ -1,4 +1,4 @@
-from papercode.language.Highlighter import Highlighter
+from papercode.language.highlighter import Highlighter
 from pyppeteer import launch
 from PyPDF2 import PdfFileWriter, PdfFileReader
 from bs4 import BeautifulSoup
