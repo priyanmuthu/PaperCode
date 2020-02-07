@@ -19,7 +19,8 @@ class SidebarCodePrinter(CodePrinter):
         template_text = UtilMethods.text_from_file(self.html_template_path)
         soup = BeautifulSoup(template_text, 'html.parser')
         self.base_div.generate_html(soup)
-        self.sidebar_div.generate_html(soup)
+        if self.sidebar_div is not None:
+            self.sidebar_div.generate_html(soup)
         return str(soup)
 
     def print_code_file(self):
