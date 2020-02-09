@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import * as ts from "typescript";
+import * as pn from './papernode'
 
 export function delint(sourceFile: ts.SourceFile, program: ts.Program) {
   delintNode(sourceFile);
@@ -67,6 +68,7 @@ export function getAST(filePath: string){
     target: ts.ScriptTarget.ES5,
     module: ts.ModuleKind.CommonJS
   }
+
   // Parsing a file
   const sourceFile = ts.createSourceFile(
       filePath,
