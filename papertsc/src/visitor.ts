@@ -1,15 +1,12 @@
-import { Project, StructureKind } from "ts-morph";
-import { readFileSync } from "fs";
 import * as ts from "ts-morph";
-import path from 'path'
-import { visitNodes } from "typescript";
 import * as pn from './papernode'
 
 export function delint(sourceFile: ts.SourceFile) {
     var rootNode = new pn.PaperNode(sourceFile, getStartPosition(sourceFile), getEndPosition(sourceFile));
     var currentParent = rootNode;
     var tabSpaces: string[] = [];
-    sourceFile.forEachChild(delintNode)
+    // sourceFile.forEachChild(delintNode)
+    delintNode(sourceFile);
     // sourceFile.getChildren()[0].getChildren().forEach(child => {
     //     console.log(ts.SyntaxKind[child.getKind()]);
     // });
@@ -27,7 +24,7 @@ export function delint(sourceFile: ts.SourceFile) {
                     break;
                 }
                 var interface_node = node as ts.InterfaceDeclaration;
-                console.log(`For the Class: ${interface_node.getName()} @ (${interface_node.getStartLineNumber()}, ${interface_node.getEndLineNumber()})`)
+                // console.log(`For the Class: ${interface_node.getName()} @ (${interface_node.getStartLineNumber()}, ${interface_node.getEndLineNumber()})`)
                 var iNode = new pn.InterfaceNode(node,
                     currentParent,
                     interface_node.getName(),
@@ -42,7 +39,7 @@ export function delint(sourceFile: ts.SourceFile) {
                     break;
                 }
                 var class_node = node as ts.ClassDeclaration;
-                console.log(`For the Class: ${class_node.getName()} @ (${class_node.getStartLineNumber()}, ${class_node.getEndLineNumber()})`)
+                // console.log(`For the Class: ${class_node.getName()} @ (${class_node.getStartLineNumber()}, ${class_node.getEndLineNumber()})`)
                 var cNode = new pn.ClassNode(node,
                     currentParent,
                     class_node.getName() || '',
@@ -60,7 +57,35 @@ export function delint(sourceFile: ts.SourceFile) {
                 });
                 currentParent = temp_parent;    // Changing back the parent
                 break;
-            
+
+            case ts.SyntaxKind.Constructor:
+                // Do something here
+                // If parent is a function, skip it
+                if (currentParent.kind === pn.NodeKind.Function) {
+                    break;
+                }
+                // var constructor_node = node as ts.ConstructorDeclaration;
+                // console.log(`Constructor: ${typeof(node)}`);
+                // console.log(`For the Method: ${method_node.getName()} @ (${method_node.getStartLineNumber()}, ${method_node.getEndLineNumber()})`)
+                var consNode = new pn.FunctionNode(node,
+                    currentParent,
+                    'Constructor',
+                    getStartPosition(node),
+                    getEndPosition(node),
+                    getStartPosition(node),
+                    getEndPosition(node));
+
+                currentParent.addChildren(consNode);
+
+                // We need to venture into Functions
+                var temp_parent = currentParent;    // Changing the parent to the current node
+                currentParent = consNode;
+                node.getChildren().forEach(child => {
+                    delintNode(child);
+                });
+                currentParent = temp_parent;    // Changing back the parent
+                break;
+
             case ts.SyntaxKind.MethodDeclaration:
                 // Do something here
                 // If parent is a function, skip it
@@ -68,8 +93,8 @@ export function delint(sourceFile: ts.SourceFile) {
                     break;
                 }
                 var method_node = node as ts.MethodDeclaration;
-                console.log(`For the Method: ${method_node.getName()} @ (${method_node.getStartLineNumber()}, ${method_node.getEndLineNumber()})`)
-                var fNode = new pn.FunctionNode(node,
+                // console.log(`For the Method: ${method_node.getName()} @ (${method_node.getStartLineNumber()}, ${method_node.getEndLineNumber()})`)
+                var metNode = new pn.FunctionNode(node,
                     currentParent,
                     method_node.getName() || '',
                     getStartPosition(node),
@@ -77,17 +102,17 @@ export function delint(sourceFile: ts.SourceFile) {
                     getStartPosition(node),
                     getEndPosition(node));
 
-                currentParent.addChildren(fNode);
+                currentParent.addChildren(metNode);
 
                 // We need to venture into Functions
                 var temp_parent = currentParent;    // Changing the parent to the current node
-                currentParent = fNode;
+                currentParent = metNode;
                 node.getChildren().forEach(child => {
                     delintNode(child);
                 });
                 currentParent = temp_parent;    // Changing back the parent
                 break;
-                
+
             case ts.SyntaxKind.FunctionDeclaration:
                 // Do something here
                 // If parent is a function, skip it
@@ -95,7 +120,7 @@ export function delint(sourceFile: ts.SourceFile) {
                     break;
                 }
                 var function_node = node as ts.FunctionDeclaration;
-                console.log(`For the function: ${function_node.getName()} @ (${function_node.getStartLineNumber()}, ${function_node.getEndLineNumber()})`)
+                // console.log(`For the function: ${function_node.getName()} @ (${function_node.getStartLineNumber()}, ${function_node.getEndLineNumber()})`)
                 var fNode = new pn.FunctionNode(node,
                     currentParent,
                     function_node.getName() || '',
@@ -120,15 +145,15 @@ export function delint(sourceFile: ts.SourceFile) {
                     break;
                 }
                 var call_expression = node as ts.CallExpression;
-                console.log(`For the call_expression: @ (${call_expression.getStartLineNumber()}, ${call_expression.getEndLineNumber()})`)
+                // console.log(`For the call_expression: @ (${call_expression.getStartLineNumber()}, ${call_expression.getEndLineNumber()})`)
                 var fParentNode = currentParent as pn.FunctionNode;
                 fParentNode.addFunctionCall(
                     new pn.CallNode(
-                        call_expression, 
-                        fParentNode, 
-                        getStartPosition(call_expression), 
+                        call_expression,
+                        fParentNode,
+                        getStartPosition(call_expression),
                         getEndPosition(call_expression))
-                    );
+                );
 
                 // Todo: Maybe traverse inside
                 break;
@@ -150,18 +175,25 @@ export function delint(sourceFile: ts.SourceFile) {
 
     function getStartPosition(node: ts.Node): pn.Position {
         var lineChar = sourceFile.compilerNode.getLineAndCharacterOfPosition(node.getStart());
-        return new pn.Position(lineChar.line, lineChar.character);
+        return new pn.Position(lineChar.line + 1, lineChar.character + 1);
     }
 
     function getEndPosition(node: ts.Node): pn.Position {
-        var lineChar = sourceFile.compilerNode.getLineAndCharacterOfPosition(node.getStart());
-        return new pn.Position(lineChar.line, lineChar.character);
+        var lineChar = sourceFile.compilerNode.getLineAndCharacterOfPosition(node.getEnd());
+        return new pn.Position(lineChar.line + 1, lineChar.character + 1);
     }
+}
+
+function PrintAST(node: pn.PaperNode, tabspaces: string = '') {
+    console.log(node.ToString(tabspaces));
+    node.children.forEach(child => {
+        PrintAST(child, tabspaces + '\t');
+    });
 }
 
 export function getAST(sourceFilesPath: string, tsFilePath: string) {
     // initialize
-    const project = new Project({
+    const project = new ts.Project({
         // Optionally specify compiler options, tsconfig.json, in-memory file system, and more here.
         // If you initialize with a tsconfig.json, then it will automatically populate the project
         // with the associated source files.
@@ -172,5 +204,6 @@ export function getAST(sourceFilesPath: string, tsFilePath: string) {
     project.addSourceFilesAtPaths(sourceFilesPath);
     var pytutorSourceFile = project.getSourceFile(tsFilePath)!;
 
-    delint(pytutorSourceFile);
+    var AST_root = delint(pytutorSourceFile);
+    return AST_root;
 }

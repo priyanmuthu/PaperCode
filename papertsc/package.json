@@ -15,6 +15,9 @@
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "ts-morph": "^6.0.2"
+    "highlight.js": "^9.18.1",
+    "prismjs": "^1.19.0",
+    "ts-morph": "^6.0.2",
+    "uuid": "^3.4.0"
   }
 }

@@ -1,4 +1,6 @@
-import { Node as tsNode } from "ts-morph";
+import { Node as tsNode, SyntaxKind } from "ts-morph";
+import { fstat } from "fs";
+const uuidv4 = require('uuid/v4');
 
 export class Position {
     line: number;
@@ -26,6 +28,7 @@ export class PaperNode {
     public start_pos: Position;
     public end_pos: Position;
     public children: PaperNode[];
+    public uid: string;
 
     constructor(compiler_node: tsNode, startPos: Position, endPos: Position, parent?: PaperNode) {
         this.kind = NodeKind.Node;
@@ -34,6 +37,7 @@ export class PaperNode {
         this.start_pos = startPos;
         this.end_pos = endPos;
         this.children = [];
+        this.uid = uuidv4();
     }
 
     public getChildren() {
@@ -42,6 +46,14 @@ export class PaperNode {
 
     public addChildren(childNode: PaperNode) {
         this.children.push(childNode);
+    }
+
+    public ToString(tabspace: string = '') {
+        return tabspace + `Other Node: ${SyntaxKind[this.compiler_node.getKind()]} @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`;
+    }
+
+    public getJson() {
+        var json = {};
     }
 }
 
@@ -53,6 +65,10 @@ export class InterfaceNode extends PaperNode {
         super(compiler_node, startPos, endPos, parent)
         this.kind = NodeKind.Interface;
         this.name = name;
+    }
+
+    public ToString(tabspace: string = '') {
+        return tabspace + `Interface: ${this.name} @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`;
     }
 }
 
@@ -68,6 +84,10 @@ export class ClassNode extends PaperNode {
         this.name = name;
         this.body_start_pos = body_start_pos;
         this.body_end_position = body_end_position;
+    }
+
+    public ToString(tabspace: string = '') {
+        return tabspace + `Class: ${this.name} @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`;
     }
 }
 
@@ -98,6 +118,14 @@ export class FunctionNode extends PaperNode {
     public addFunctionCallArray(fCalls: CallNode[]) {
         this.function_calls.push(...fCalls);
     }
+
+    public ToString(tabspace: string = '') {
+        var fString = [`Function: ${this.name} @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`];
+        this.function_calls.forEach(fc => {
+            fString.push(tabspace + '\t' + fc.ToString())
+        });
+        return tabspace + fString.join('\n');
+    }
 }
 
 export class CallNode extends PaperNode {
@@ -107,5 +135,9 @@ export class CallNode extends PaperNode {
     constructor(compiler_node: tsNode, parent: PaperNode, startPos: Position, endPos: Position) {
         super(compiler_node, startPos, endPos, parent)
         this.kind = NodeKind.Call;
+    }
+
+    public ToString(tabspace: string = '') {
+        return tabspace + `Call Expression @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`;
     }
 }
