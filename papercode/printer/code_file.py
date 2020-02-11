@@ -1,6 +1,6 @@
 from papercode.language import parser, structure_visitor
 from papercode.language.node import *
-from papercode.common.utils import UtilMethods
+from papercode.common.utils import UtilMethods, Language
 import jedi
 
 class CodeFile:
@@ -11,6 +11,9 @@ class CodeFile:
         self.all_lines = self.source_code.splitlines()
         self.jedi_script = jedi.Script(source=self.source_code, path=self.file_path)
         self.syntax_tree = None
+        self.language = Language.Python
+        if(UtilMethods.get_file_ext(file_path) == '.ts'):
+            self.language = Language.Typescript
 
     def process(self):
         self.generate_syntax_tree()

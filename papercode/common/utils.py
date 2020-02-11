@@ -4,6 +4,12 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 from bs4 import BeautifulSoup
 import asyncio
 import sys
+import os.path
+import enum
+
+class Language(enum.Enum):
+    Python = 1
+    Typescript = 2
 
 class PaperOptions:
     def __init__(self, paper_size, max_lines):
@@ -17,16 +23,25 @@ print_paper = {
 class UtilMethods:
 
     @staticmethod
-    def text_from_file(file_path):
+    def text_from_file(file_path: str):
         f = open(file_path, 'r')
         file_text = f.read()
         f.close()
         return file_text
 
     @staticmethod
-    def highlight(source_code):
+    def get_file_ext(file_path: str):
+        return os.path.splitext(file_path)[-1]
+
+    @staticmethod
+    def highlight(source_code: str, lang: Language = Language.Python):
         highlighter = Highlighter()
-        return highlighter.highlight_python_file(source_code)
+        if lang == Language.Python:
+            return highlighter.highlight_python_file(source_code)
+        elif lang == Language.Typescript:
+            return highlighter.highlight_ts_file(source_code)
+        else:
+            return highlighter.highlight_file(source_code)
 
     @staticmethod
     def flatten_syntax_tree(tree_node, filter_types = [], flat_tree = []):
@@ -81,9 +96,9 @@ class UtilMethods:
         asyncio.get_event_loop().run_until_complete(UtilMethods.get_pdf(html_code, pdf_file_path))
 
     @staticmethod
-    def get_pre_formated_text(partition):
+    def get_pre_formated_text(partition, lang: Language = Language.Python):
         partition_code = '\n'.join(partition['source_code_lines'])
-        partition_html = UtilMethods.highlight(partition_code)
+        partition_html = UtilMethods.highlight(partition_code, lang)
         soup = BeautifulSoup(partition_html, 'html.parser')
         res = soup.find('table')
         td_line_nos = res.find('td')

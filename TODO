@@ -13,3 +13,4 @@
 ☐ Commits / Diffs / PR
 ☐ Page break wrt to indendation depth
 ☐ Paper options
+☐ @ markers in python functions don't display correctly - due to top aligm - fix whitespace stuff

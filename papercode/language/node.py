@@ -10,6 +10,16 @@ class Node(object):
         print('Node: Child Count: ', len(self.children))
 
 
+class InterfaceNode(Node):
+    def __init__(self, cst_node, parent_node, name, start_pos, end_pos, body_start_pos, body_end_pos):
+        super().__init__(cst_node, start_pos, end_pos, parent_node)
+        self.name = name
+        self.body_start_pos = body_start_pos
+        self.body_end_pos = body_end_pos
+    
+    def print(self):
+        print('Interface: ', self.name, 'Parent: ', type(self.parent_node), ' Children: ', len(self.children))
+
 class ClassNode(Node):
     def __init__(self, cst_node, parent_node, name, start_pos, end_pos, body_start_pos, body_end_pos):
         super().__init__(cst_node, start_pos, end_pos, parent_node)

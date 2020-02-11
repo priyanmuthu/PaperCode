@@ -3,11 +3,13 @@ from papercode.printer.base_div import EverythingBaseDiv, EmptyBaseDiv, BigFunct
 from papercode.printer.sidebar_div import SmallFunctionSidebarDiv, ReferencesSidebarDiv
 from papercode.printer.code_printer import RegularCodePrinter
 from papercode.printer.sidebar_code_printer import SidebarCodePrinter
+from papercode.common.utils import UtilMethods, Language
 
 def run():
     # file_path = 'papercode/temp/temp.py'
     file_path = 'papercode/temp/temp2.py'
     # file_path = 'papercode/temp/fpdf.py'
+    # file_path = 'D:/PV/Research/PaperCode/papertsc/temp/project1/pytutor.ts'
     # template_path = 'papercode/templates/template2.html'
     pdf_file_path = 'papercode/temp/pup.pdf'
     code_file = CodeFile(file_path)
