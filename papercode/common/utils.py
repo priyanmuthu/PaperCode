@@ -20,6 +20,11 @@ print_paper = {
     'A4': PaperOptions('A4', 96)
 }
 
+class Position:
+    def __init__(self, line: int, column: int):
+        self.line = line
+        self.column = column
+
 class UtilMethods:
 
     @staticmethod

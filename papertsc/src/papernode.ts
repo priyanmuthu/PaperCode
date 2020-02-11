@@ -183,7 +183,7 @@ export class ClassNode extends PaperNode {
     public toJSON() {
         var jsonObj = super.toJSON();
         jsonObj['name'] = this.name;
-        jsonObj['bosy_start_pos'] = this.body_start_pos.toJSON();
+        jsonObj['body_start_pos'] = this.body_start_pos.toJSON();
         jsonObj['body_end_pos'] = this.body_end_pos.toJSON();
         return jsonObj;
     }
@@ -266,7 +266,7 @@ export class FunctionNode extends PaperNode {
     public toJSON() {
         var jsonObj = super.toJSON();
         jsonObj['name'] = this.name;
-        jsonObj['bosy_start_pos'] = this.body_start_pos.toJSON();
+        jsonObj['body_start_pos'] = this.body_start_pos.toJSON();
         jsonObj['body_end_pos'] = this.body_end_pos.toJSON();
         var func_calls: any[] = [];
         this.function_calls.forEach(fc => {

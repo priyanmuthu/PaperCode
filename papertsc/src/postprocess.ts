@@ -37,8 +37,6 @@ export function postProcess(rootNode: pn.PaperNode) {
 
     // Trying out serialization
     // var json = serialize(rootNode);
-    var json = rootNode.toJSON();
-    console.log(JSON.stringify(json));
 }
 
 function getAllNodesOfKind(node: pn.PaperNode, kind: pn.NodeKind, nodeList: pn.PaperNode[]) {
