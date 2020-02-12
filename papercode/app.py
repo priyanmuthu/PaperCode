@@ -17,7 +17,8 @@ def runts():
     code_file = TsCodeFile(file_path, project_path)
     code_file.process()
     base_div = EverythingBaseDiv(code_file)
-    sidebar_div = None
+    # sidebar_div = None
+    sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     code_printer = SidebarCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
     html_code = code_printer.print_code_file()
     print(html_code)

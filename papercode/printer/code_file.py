@@ -16,6 +16,25 @@ class CodeFile:
     def process(self):
         pass
 
+    def get_partition(self, start_line, end_line, partition_type):
+        line_nos = [i for i in range(start_line, end_line+1)]
+        source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
+        return {
+            'line_nos': line_nos, 
+            'source_code_lines': source_code_lines, 
+            'length': len(line_nos), 
+            'partition_type': partition_type
+            }
+    def get_partition_from_node(self, cst_node):
+        if type(cst_node) is Node:
+            if len(cst_node.children) == 0:
+                return self.get_partition(1, len(self.all_lines)+1, Node)
+            return self.get_partition(1, cst_node.children[0].start_pos.line-1, Node)
+        elif type(cst_node) is ClassNode:
+            return self.get_partition(cst_node.start_pos.line, cst_node.body_start_pos.line - 1, ClassNode)
+        elif type(cst_node) is FunctionNode:
+            return self.get_partition(cst_node.start_pos.line, cst_node.end_pos.line, FunctionNode)
+
 class PyCodeFile(CodeFile):
     def __init__(self, file_path: str, project_path: str = None):
         super().__init__(file_path, project_path, Language.Python)
@@ -86,25 +105,6 @@ class PyCodeFile(CodeFile):
             
         return partitions
 
-    def get_partition(self, start_line, end_line, partition_type):
-        line_nos = [i for i in range(start_line, end_line+1)]
-        source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
-        return {
-            'line_nos': line_nos, 
-            'source_code_lines': source_code_lines, 
-            'length': len(line_nos), 
-            'partition_type': partition_type
-            }
-    def get_partition_from_node(self, cst_node):
-        if type(cst_node) is Node:
-            if len(cst_node.children) == 0:
-                return self.get_partition(1, len(self.all_lines)+1, Node)
-            return self.get_partition(1, cst_node.children[0].start_pos.line-1, Node)
-        elif type(cst_node) is ClassNode:
-            return self.get_partition(cst_node.start_pos.line, cst_node.body_start_pos.line - 1, ClassNode)
-        elif type(cst_node) is FunctionNode:
-            return self.get_partition(cst_node.start_pos.line, cst_node.end_pos.line, FunctionNode)
-
 class TsCodeFile(CodeFile):
     def __init__(self, file_path: str, project_path: str = None):
         super().__init__(file_path, project_path, Language.Typescript)
@@ -115,7 +115,7 @@ class TsCodeFile(CodeFile):
 
     def process(self):
         self.generate_syntax_tree()
-        # self.post_process_syntax_tree() 
+        self.post_process_syntax_tree() 
 
     def generate_syntax_tree(self):
         # Call the tsc module
@@ -150,18 +150,18 @@ class TsCodeFile(CodeFile):
         elif json_obj['kind'] == 4: # Call Node
             node = CallNode(None, self.node_dict[json_obj['parentuid']], None, start_pos, end_pos, start_pos)
             # add func stuff
-            self.call_func[json_obj['uid']] = json_obj['func']
+            self.call_func[node] = json_obj['func']
         
         # adding the node to uid dict
         self.node_dict[json_obj['uid']] = node
 
         #Extra processing for functions
-        if json_obj['kind'] == 3:
+        if json_obj['kind'] == 3: # Function Node
             # processing function calls
             for fc in json_obj['function_calls']:
                 node.function_calls.append(self.create_node(fc))
             # add references for post processing
-            self.ref_dict[json_obj['uid']] = json_obj['refs']
+            self.ref_dict[node] = json_obj['refs']
 
         for child in json_obj['children']:
             node.children.append(self.create_node(child))
@@ -185,29 +185,17 @@ class TsCodeFile(CodeFile):
             self.print_tree(child, tabspaces + '\t')
 
     def post_process_syntax_tree(self):
-        if self.syntax_tree is None:
-            return
-        functions = []
-        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node, ClassNode, CallNode], functions)
-        function_line_dict = {f.start_pos.line : f for f in functions}
-        # print(function_line_dict)
-        for func in functions:
-            if type(func) is not FunctionNode:
-                continue
-            # get all the calls and point it to the actual function
-            calls = func.function_calls
-            for fc in calls:
-                # Get the function call location and find the function node
-                func_defs = self.jedi_script.goto(fc.ref_pos.line, fc.ref_pos.column)
-                if len(func_defs) == 0:
-                    continue
-                
-                if func_defs[0].line not in function_line_dict:
-                    continue
-                qf = function_line_dict[func_defs[0].line]
-                fc.function_node = qf
-                fc.from_function_node = func
-                qf.refs.append(fc)
+        # Post processing for TS
+
+        # Functions in call expressions
+        for call in self.call_func:
+            call.function_node = self.node_dict[self.call_func[call]]
+            call.from_function_node = call.parent_node
+
+        # Function references
+        for func in self.ref_dict:
+            for ref in self.ref_dict[func]:
+                func.refs.append(self.node_dict[ref])
 
     def generate_partitions(self):
         partitions = []
@@ -237,22 +225,3 @@ class TsCodeFile(CodeFile):
                     partitions.append(self.get_partition(tnode.start_pos.line, tnode.end_pos.line, FunctionNode))
             
         return partitions
-
-    def get_partition(self, start_line, end_line, partition_type):
-        line_nos = [i for i in range(start_line, end_line+1)]
-        source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
-        return {
-            'line_nos': line_nos, 
-            'source_code_lines': source_code_lines, 
-            'length': len(line_nos), 
-            'partition_type': partition_type
-            }
-    def get_partition_from_node(self, cst_node):
-        if type(cst_node) is Node:
-            if len(cst_node.children) == 0:
-                return self.get_partition(1, len(self.all_lines)+1, Node)
-            return self.get_partition(1, cst_node.children[0].start_pos.line-1, Node)
-        elif type(cst_node) is ClassNode:
-            return self.get_partition(cst_node.start_pos.line, cst_node.body_start_pos.line - 1, ClassNode)
-        elif type(cst_node) is FunctionNode:
-            return self.get_partition(cst_node.start_pos.line, cst_node.end_pos.line, FunctionNode)
