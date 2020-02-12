@@ -28,6 +28,12 @@ class EverythingBaseDiv(BaseDiv):
 
         # Start from the root and recursively generate partitions
         root_node: Node = self.code_file.syntax_tree
+
+        # Edge case for typescript
+        if root_node.start_pos.line > 1:
+            part = self.code_file.get_partition(1, root_node.start_pos.line - 1, type(root_node))
+            partitions.append({'base': part, 'node': root_node})
+
         self.getPartitions(root_node, partitions)
         for p in partitions:
             # base, side bar : create tables seperately for both
