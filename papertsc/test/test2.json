@@ -1,0 +1,28 @@
+{
+    "uid": "a970e8cd-b04c-40bf-b970-5cd2ee4a166c",
+    "kind": 3,
+    "parentuid": "4b1e8421-d05b-42b5-a88f-a4801c1c6f9d",
+    "start_pos": {
+        "line": 71,
+        "column": 1
+    },
+    "end_pos": {
+        "line": 85,
+        "column": 2
+    },
+    "children": [],
+    "name": "multiplyLists",
+    "bosy_start_pos": {
+        "line": 71,
+        "column": 1
+    },
+    "body_end_pos": {
+        "line": 85,
+        "column": 2
+    },
+    "function_calls": [],
+    "refs": [
+        "d94a097c-5864-4655-94ce-db7721bb58b8",
+        "3c2a8f04-4555-4f89-9352-5316d07e5a8b"
+    ]
+}
