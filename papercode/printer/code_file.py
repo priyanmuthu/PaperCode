@@ -1,8 +1,11 @@
 from papercode.language import parser, structure_visitor
 from papercode.language.node import *
 from papercode.common.utils import UtilMethods, Language, Position
+from os.path import abspath
 import jedi
 import json
+import tempfile
+import subprocess
 
 class CodeFile:
     def __init__(self, file_path: str, project_path: str = None, lang: Language = Language.Python):
@@ -108,21 +111,33 @@ class PyCodeFile(CodeFile):
 class TsCodeFile(CodeFile):
     def __init__(self, file_path: str, project_path: str = None):
         super().__init__(file_path, project_path, Language.Typescript)
-        self.jedi_script = jedi.Script(source=self.source_code, path=self.file_path)
         self.node_dict = {}
         self.ref_dict = {}
         self.call_func = {}
+        self.tsc_path = abspath('../PaperCode/papertsc/dist/app.js')
 
     def process(self):
         self.generate_syntax_tree()
         self.post_process_syntax_tree() 
 
+    def get_ts_parsed_json(self):
+        temp_filename = tempfile.mktemp()
+        command = ['node', self.tsc_path, '-p', self.project_path, '-f', self.file_path, '-o', temp_filename]
+        process = subprocess.Popen(command, stdout=subprocess.PIPE)
+        process.wait()
+        print(process.returncode)
+        if process.returncode != 0:
+            print(process.returncode)
+            print('-------------------\n\n\n\n')
+            raise Exception('Cannot parse typescript file')
+        return UtilMethods.text_from_file(temp_filename)
+
     def generate_syntax_tree(self):
         # Call the tsc module
         # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/pytutor.json'
-        json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/pyt.json'
+        # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/pyt.json'
         # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/test2.json'
-        json_text = UtilMethods.text_from_file(json_file_path)
+        json_text = self.get_ts_parsed_json()
         json_obj = json.loads(json_text)
         root_node = self.create_node(json_obj)
         # print(self.create_node(json_obj))

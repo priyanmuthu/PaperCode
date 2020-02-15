@@ -4,15 +4,26 @@ from papercode.printer.sidebar_div import SmallFunctionSidebarDiv, ReferencesSid
 from papercode.printer.code_printer import RegularCodePrinter
 from papercode.printer.sidebar_code_printer import SidebarCodePrinter
 from papercode.common.utils import UtilMethods, Language
+from os.path import abspath
 
 def run():
     # runpy()
     runts()
 
 def runts():
-    file_path = 'D:/PV/Research/PaperCode/papertsc/temp/project1/pytutor.ts'
-    project_path = 'D:/PV/Research/PaperCode/papertsc/temp/project1/'
-    pdf_file_path = 'papercode/temp/pup.pdf'
+    file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')
+    project_path = abspath('../PaperCode/papertsc/test/project1/**/*.ts')
+    pdf_file_path = abspath('papercode/temp/pup.pdf')
+    
+    # parsing tsc as json
+    # tsc_path = abspath('../PaperCode/papertsc/dist/app.js')
+    # temp_filename = tempfile.mktemp()
+    # command = ['node', tsc_path, '-p', project_path, '-f', file_path, '-o', temp_filename]
+    # print(command)
+    # process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    # process.wait()
+    # print('\n\n------------------------\n\n')
+    # print(abspath(temp_filename))
 
     code_file = TsCodeFile(file_path, project_path)
     code_file.process()
