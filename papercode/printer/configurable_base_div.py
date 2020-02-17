@@ -12,6 +12,8 @@ class ConfigurableBaseDiv(BaseDiv):
         #Config
         self.hideBigComments = True
         self.BigCommentLimit = 4
+        self.pushSmallComments = True
+        self.smallCommentLimit = 2
 
 
     def generate_html(self, soup: BeautifulSoup):
@@ -30,6 +32,13 @@ class ConfigurableBaseDiv(BaseDiv):
                 partitions.append({'base': part, 'node': root_node})
 
         self.getPartitions(root_node, partitions)
+        partitions = self.squash_partitions(partitions)
+
+        for p in partitions:
+            if 'base' not in p:
+                print(p)
+                raise Exception('Damn')
+
         for p in partitions:
             # base, side bar : create tables seperately for both
 
@@ -68,13 +77,14 @@ class ConfigurableBaseDiv(BaseDiv):
             code_table_data.append(highlight_div)
 
             # Generating the side bar table
-            # side_table = self.get_table_for_sidebar(soup, p['sidebar'])
             sidebar_table_data = soup.new_tag('td')
             if p['node'] not in self.elements_sidebar_td:
                 self.elements_sidebar_td[p['node']] = part_uuid + '-sidebar'
                 sidebar_table_data['id'] = self.elements_sidebar_td[p['node']]
             sidebar_table_data['class'] = ['sidebar']
-            # sidebar_table_data.append(side_table)
+            if 'sidebar' in p:
+                side_table = self.get_table_for_sidebar(soup, [p['sidebar']])
+                sidebar_table_data.append(side_table)
 
             table_row = soup.new_tag('tr')
             table_row.append(line_table_data)
@@ -116,7 +126,57 @@ class ConfigurableBaseDiv(BaseDiv):
             if self.hideBigComments and node.size > self.BigCommentLimit:
                 part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
                 partitions.append({'base': part, 'node': node})
+            elif self.pushSmallComments and node.size <= self.smallCommentLimit:
+                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+                partitions.append({'sidebar': part})
             else:
                 part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
                 partitions.append({'base': part, 'node': node})
         return
+
+    def squash_partitions(self, partitions: list):
+        res_partition = []
+        sidebar = None
+        for part in partitions:
+            if 'base' in part:
+                if sidebar is not None:
+                    part['sidebar'] = sidebar
+                    sidebar = None
+                res_partition.append(part)
+            elif 'sidebar' in part:
+                sidebar = part['sidebar']
+        
+        if sidebar is not None and 'base' in sidebar:
+            res_partition.append(sidebar)
+        return res_partition
+    
+    def get_table_for_sidebar(self, soup, partitions):
+        side_table = soup.new_tag('table')
+        for p in partitions:
+            _, pcode = UtilMethods.get_pre_formated_text(p, self.code_file.language)
+            line_str = '<pre>' + '\n'.join(str(lno) for lno in p['line_nos']) + '</pre>'
+            
+            # Generating the table row
+            line_no_div = soup.new_tag('div')
+            line_no_div['class'] = ['linenodiv']
+            line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
+
+            line_table_data = soup.new_tag('td')
+            line_table_data['class'] = ['linenos']
+            line_table_data.append(line_no_div)
+
+
+            highlight_div = soup.new_tag('div')
+            highlight_div['class'] = ['highlight']
+            highlight_div.append(BeautifulSoup(pcode, 'html.parser'))
+
+            code_table_data = soup.new_tag('td')
+            code_table_data['class'] = ['code']
+            code_table_data.append(highlight_div)
+
+            table_row = soup.new_tag('tr')
+            table_row.append(line_table_data)
+            table_row.append(code_table_data)
+
+            side_table.append(table_row)
+        return side_table
