@@ -18,6 +18,8 @@ def runts():
 
     code_file = TsCodeFile(file_path, project_path)
     code_file.process()
+    # code_file.print_tree(code_file.syntax_tree)
+    # return
     base_div = ConfigurableBaseDiv(code_file)
     # sidebar_div = None
     sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)

@@ -28,6 +28,8 @@ class CodeFile:
             print('', tabspaces ,'Interface: ', node.name, ' @ ', node.start_pos.line)
         elif type(node) == FunctionNode:
             print('', tabspaces ,'Function: ', node.name, ' @ ', node.start_pos.line)
+        elif type(node) == CommentNode:
+            print('', tabspaces ,'Comment @ ', node.start_pos, ' - ', node.end_pos)
         
         for child in node.children:
             self.print_tree(child, tabspaces + '\t')
@@ -210,6 +212,52 @@ class TsCodeFile(CodeFile):
         for func in self.ref_dict:
             for ref in self.ref_dict[func]:
                 func.refs.append(self.node_dict[ref])
+        
+        # Squashing comments:
+        self.squash_comments(self.syntax_tree)
+
+    
+    def squash_comments(self, node: Node):
+        if type(node) == CommentNode:
+            return
+        combine_stack = []
+        comment_stack = []
+        for child in node.children:
+            if type(child) != CommentNode:
+                if len(comment_stack) > 1:
+                    combine_stack.append(comment_stack)
+                comment_stack = []
+                continue
+
+            if len(comment_stack) == 0:
+                comment_stack.append(child)
+            else:
+                if comment_stack[-1].end_pos.line + 1 == child.start_pos.line:
+                    comment_stack.append(child)
+                else:
+                    # Combine and nuke the stack
+                    if len(comment_stack) > 1:
+                        combine_stack.append(comment_stack)
+                    comment_stack = []
+                    comment_stack.append(child)
+        
+        if(len(comment_stack) > 1):
+            combine_stack.append(comment_stack)
+
+        # actually combining
+        for comb_stc in combine_stack:
+            self.combine_comments(node, comb_stc)
+        
+        for ch in node.children:
+            self.squash_comments(ch)
+
+    def combine_comments(self, node, comment_stack):
+        multi_comment = CommentNode(comment_stack[0], node, comment_stack[0].start_pos, comment_stack[-1].end_pos)
+        multi_comment.is_single = True
+        child_idx = node.children.index(comment_stack[0])
+        node.children[child_idx] = multi_comment
+        for cs in comment_stack[1:]:
+            node.children.remove(cs)
 
     def generate_partitions(self):
         partitions = []

@@ -80,7 +80,7 @@ class ConfigurableBaseDiv(BaseDiv):
 
     
     def getPartitions(self, node: Node, partitions: list):
-        if type(node) == Node or type(node) == ClassNode:
+        if type(node) == Node or type(node) == ClassNode or type(node) == FunctionNode:
             # Print evenrything except the children
             current_line = node.start_pos.line - 1
             end_line = min(node.end_pos.line, len(self.code_file.all_lines))
@@ -101,7 +101,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
                 partitions.append({'base': part, 'node': node})
                 current_line = end_line
-        elif type(node) == FunctionNode or type(node) == InterfaceNode:
+        elif type(node) == InterfaceNode:
             # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
             partitions.append({'base': part, 'node': node})
