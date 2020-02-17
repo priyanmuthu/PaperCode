@@ -55,3 +55,13 @@ class CallNode(Node):
 
     def print(self):
         print('CallNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.start_pos, ',', self.end_pos, ') ', ' Children: ', len(self.children))
+    
+
+class CommentNode(Node):
+    def __init__(self, cst_node, parent_node, start_pos, end_pos):
+        # todo: change line, col to start and end position
+        super().__init__(cst_node, start_pos, end_pos, parent_node)
+        self.is_single = start_pos.line == end_pos.line
+
+    def print(self):
+        print('CommentNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.start_pos, ',', self.end_pos, ') ', ' Children: ', len(self.children))

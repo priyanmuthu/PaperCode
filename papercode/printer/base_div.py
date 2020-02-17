@@ -1,5 +1,5 @@
 from papercode.common.utils import UtilMethods
-from papercode.language.node import Node, ClassNode, FunctionNode, CallNode, InterfaceNode
+from papercode.language.node import Node, ClassNode, FunctionNode, CallNode, InterfaceNode, CommentNode
 from papercode.printer.code_file import CodeFile
 from bs4 import BeautifulSoup
 import uuid
@@ -96,6 +96,7 @@ class EverythingBaseDiv(BaseDiv):
             end_line = min(node.end_pos.line, len(self.code_file.all_lines))
             children = node.children
             for child in children:
+                # Adding intermediate lines
                 if current_line < child.start_pos.line - 1:
                     # Add a new partition
                     # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
@@ -116,6 +117,9 @@ class EverythingBaseDiv(BaseDiv):
             partitions.append({'base': part, 'node': node})
         elif type(node) == CallNode:
             pass
+        elif type(node) == CommentNode:
+            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+            partitions.append({'base': part, 'node': node})
         return
 
     def generate_html2(self, soup: BeautifulSoup):

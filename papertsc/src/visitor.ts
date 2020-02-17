@@ -157,7 +157,16 @@ export function delint(sourceFile: ts.SourceFile) {
 
                 // Todo: Maybe traverse inside
                 break;
-
+            case ts.SyntaxKind.SingleLineCommentTrivia:
+            case ts.SyntaxKind.MultiLineCommentTrivia:
+                var commentNode = new pn.CommentNode(
+                    node, 
+                    currentParent, 
+                    getStartPosition(node), 
+                    getEndPosition(node));
+                
+                currentParent.addChildren(commentNode)
+                break;
             default:
                 // Just add it as a regular papernode
                 // console.log(`Other Node: ${ts.SyntaxKind[node.getKind()]} @ (${node.getStartLineNumber()}, ${node.getEndLineNumber()})`)
@@ -184,7 +193,7 @@ export function delint(sourceFile: ts.SourceFile) {
     }
 }
 
-function PrintAST(node: pn.PaperNode, tabspaces: string = '') {
+export function PrintAST(node: pn.PaperNode, tabspaces: string = '') {
     console.log(node.ToString(tabspaces));
     node.children.forEach(child => {
         PrintAST(child, tabspaces + '\t');

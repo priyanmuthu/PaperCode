@@ -18,6 +18,19 @@ class CodeFile:
     
     def process(self):
         pass
+    
+    def print_tree(self, node, tabspaces = ''):
+        if type(node) == Node:
+            print('', tabspaces ,'Node: ', node.start_pos.line)
+        elif type(node) == ClassNode:
+            print('', tabspaces ,'Class: ', node.name, ' @ ', node.start_pos.line)
+        elif type(node) == InterfaceNode:
+            print('', tabspaces ,'Interface: ', node.name, ' @ ', node.start_pos.line)
+        elif type(node) == FunctionNode:
+            print('', tabspaces ,'Function: ', node.name, ' @ ', node.start_pos.line)
+        
+        for child in node.children:
+            self.print_tree(child, tabspaces + '\t')
 
     def get_partition(self, start_line, end_line, partition_type):
         line_nos = [i for i in range(start_line, end_line+1)]
@@ -125,7 +138,7 @@ class TsCodeFile(CodeFile):
         command = ['node', self.tsc_path, '-p', self.project_path, '-f', self.file_path, '-o', temp_filename]
         process = subprocess.Popen(command, stdout=subprocess.PIPE)
         process.wait()
-        print(process.returncode)
+        # print(process.returncode)
         if process.returncode != 0:
             print(process.returncode)
             print('-------------------\n\n\n\n')
@@ -133,10 +146,7 @@ class TsCodeFile(CodeFile):
         return UtilMethods.text_from_file(temp_filename)
 
     def generate_syntax_tree(self):
-        # Call the tsc module
-        # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/pytutor.json'
-        # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/pyt.json'
-        # json_file_path = 'D:/PV/Research/PaperCode/papertsc/temp/test2.json'
+        
         json_text = self.get_ts_parsed_json()
         json_obj = json.loads(json_text)
         root_node = self.create_node(json_obj)
@@ -166,6 +176,8 @@ class TsCodeFile(CodeFile):
             node = CallNode(None, self.node_dict[json_obj['parentuid']], None, start_pos, end_pos, start_pos)
             # add func stuff
             self.call_func[node] = json_obj['func']
+        elif json_obj['kind'] == 5: # Comment Node
+            node = CommentNode(None, self.node_dict[json_obj['parentuid']], start_pos, end_pos)
         
         # adding the node to uid dict
         self.node_dict[json_obj['uid']] = node
@@ -185,19 +197,6 @@ class TsCodeFile(CodeFile):
     def getPositionFromJson(self, json_pos):
         pos = Position(json_pos['line'], json_pos['column'])
         return pos
-
-    def print_tree(self, node, tabspaces = ''):
-        if type(node) == Node:
-            print('', tabspaces ,'Node: ', node.start_pos.line)
-        elif type(node) == ClassNode:
-            print('', tabspaces ,'Class: ', node.name, ' @ ', node.start_pos.line)
-        elif type(node) == InterfaceNode:
-            print('', tabspaces ,'Interface: ', node.name, ' @ ', node.start_pos.line)
-        elif type(node) == FunctionNode:
-            print('', tabspaces ,'Function: ', node.name, ' @ ', node.start_pos.line)
-        
-        for child in node.children:
-            self.print_tree(child, tabspaces + '\t')
 
     def post_process_syntax_tree(self):
         # Post processing for TS

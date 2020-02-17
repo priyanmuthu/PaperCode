@@ -1,5 +1,6 @@
 from papercode.printer.code_file import CodeFile, PyCodeFile, TsCodeFile
 from papercode.printer.base_div import EverythingBaseDiv, EmptyBaseDiv, BigFunctionBaseDiv
+from papercode.printer.configurable_base_div import ConfigurableBaseDiv
 from papercode.printer.sidebar_div import SmallFunctionSidebarDiv, ReferencesSidebarDiv
 from papercode.printer.code_printer import RegularCodePrinter
 from papercode.printer.sidebar_code_printer import SidebarCodePrinter
@@ -14,24 +15,15 @@ def runts():
     file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')
     project_path = abspath('../PaperCode/papertsc/test/project1/**/*.ts')
     pdf_file_path = abspath('papercode/temp/pup.pdf')
-    
-    # parsing tsc as json
-    # tsc_path = abspath('../PaperCode/papertsc/dist/app.js')
-    # temp_filename = tempfile.mktemp()
-    # command = ['node', tsc_path, '-p', project_path, '-f', file_path, '-o', temp_filename]
-    # print(command)
-    # process = subprocess.Popen(command, stdout=subprocess.PIPE)
-    # process.wait()
-    # print('\n\n------------------------\n\n')
-    # print(abspath(temp_filename))
 
     code_file = TsCodeFile(file_path, project_path)
     code_file.process()
-    base_div = EverythingBaseDiv(code_file)
+    base_div = ConfigurableBaseDiv(code_file)
     # sidebar_div = None
     sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     code_printer = SidebarCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
-    html_code = code_printer.print_code_file()
+    # html_code = code_printer.print_code_file()
+    html_code = code_printer.get_html()
     print(html_code)
 
 def runpy():

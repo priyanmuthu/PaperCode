@@ -146,3 +146,14 @@ class ReferencesSidebarDiv(SidebarDiv):
         sidebar_pre.string = '\n'.join(call_strings)
         sidebar_div.append(sidebar_pre)
         return sidebar_div
+
+class CommentsSidebarDiv(SidebarDiv):
+    def __init__(self, base_div: BaseDiv, code_file: CodeFile, size_limit: int):
+        if not(type(base_div) is EverythingBaseDiv):
+            raise Exception('Unsupported Sidebar')
+        super().__init__(base_div, code_file)
+        self.size_limit = size_limit
+    
+    def generate_html(self, soup: BeautifulSoup):
+        # Todo: Implement this
+        pass

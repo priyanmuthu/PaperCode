@@ -29,7 +29,8 @@ export enum NodeKind {
     Class,
     Interface,
     Function,
-    Call
+    Call,
+    Comment,
 }
 
 // Helperfunctions
@@ -279,6 +280,29 @@ export class FunctionNode extends PaperNode {
             refs_arr.push(r.uid);
         });
         jsonObj['refs'] = refs_arr;
+        return jsonObj;
+    }
+}
+
+@Serializable('PaperNode')
+export class CommentNode extends PaperNode {
+
+    @JsonProperty()
+    public isSingle: boolean;
+
+    constructor(compiler_node: tsNode, parent: PaperNode, startPos: Position, endPos: Position) {
+        super(compiler_node, startPos, endPos, parent)
+        this.kind = NodeKind.Comment;
+        this.isSingle = startPos.line == endPos.line;
+    }
+
+    public ToString(tabspace: string = '') {
+        return tabspace + `${this.isSingle ? 'Single line' : 'Multi Line'} Comment @ (${this.start_pos.line}, ${this.start_pos.column}) - (${this.end_pos.line}, ${this.end_pos.column})`;
+    }
+
+    public toJSON() {
+        var jsonObj = super.toJSON();
+        jsonObj['is_single'] = this.isSingle;
         return jsonObj;
     }
 }
