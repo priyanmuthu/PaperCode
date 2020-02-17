@@ -62,6 +62,7 @@ class CommentNode(Node):
         # todo: change line, col to start and end position
         super().__init__(cst_node, start_pos, end_pos, parent_node)
         self.is_single = start_pos.line == end_pos.line
+        self.size = self.end_pos.line - self.start_pos.line + 1
 
     def print(self):
         print('CommentNode - ', 'Parent: ', type(self.parent_node), 'pos(', self.start_pos, ',', self.end_pos, ') ', ' Children: ', len(self.children))

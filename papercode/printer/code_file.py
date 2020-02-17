@@ -43,6 +43,17 @@ class CodeFile:
             'length': len(line_nos), 
             'partition_type': partition_type
             }
+    
+    def get_hidden_comment_node(self, start_line, end_line, hide_string, partition_type):
+        line_nos = [start_line]
+        source_code_lines = [hide_string]
+        return {
+            'line_nos': line_nos, 
+            'source_code_lines': source_code_lines, 
+            'length': len(line_nos), 
+            'partition_type': partition_type
+            }
+
     def get_partition_from_node(self, cst_node):
         if type(cst_node) is Node:
             if len(cst_node.children) == 0:

@@ -9,6 +9,11 @@ class ConfigurableBaseDiv(BaseDiv):
     def __init__(self, code_file: CodeFile):
         super().__init__(code_file)
 
+        #Config
+        self.hideBigComments = True
+        self.BigCommentLimit = 4
+
+
     def generate_html(self, soup: BeautifulSoup):
         # Given soup, Insert the main table
         highlight_table = soup.find('table', {'class': 'highlighttable'})
@@ -108,6 +113,10 @@ class ConfigurableBaseDiv(BaseDiv):
         elif type(node) == CallNode:
             pass
         elif type(node) == CommentNode:
-            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
-            partitions.append({'base': part, 'node': node})
+            if self.hideBigComments and node.size > self.BigCommentLimit:
+                part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
+                partitions.append({'base': part, 'node': node})
+            else:
+                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+                partitions.append({'base': part, 'node': node})
         return
