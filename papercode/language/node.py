@@ -5,6 +5,7 @@ class Node(object):
         self.start_pos = start_pos
         self.end_pos = end_pos
         self.children = []
+        self.size = self.end_pos.line - self.start_pos.line + 1
     
     def print(self):
         print('Node: Child Count: ', len(self.children))

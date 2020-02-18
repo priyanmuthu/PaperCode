@@ -1,4 +1,4 @@
-from papercode.common.utils import UtilMethods
+from papercode.common.utils import UtilMethods, Paper, print_paper
 from bs4 import BeautifulSoup
 from papercode.printer.code_file import CodeFile
 
@@ -6,6 +6,7 @@ class CodePrinter:
     def __init__(self, pdf_file_path: str, code_file: CodeFile):
         self.pdf_file_path = pdf_file_path
         self.code_file = code_file
+        self.paper = print_paper['A4L']
 
 class RegularCodePrinter(CodePrinter):
     def __init__(self, pdf_file_path: str, code_file: CodeFile):

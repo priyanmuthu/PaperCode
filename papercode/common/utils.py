@@ -11,13 +11,15 @@ class Language(enum.Enum):
     Python = 1
     Typescript = 2
 
-class PaperOptions:
-    def __init__(self, paper_size, max_lines):
+class Paper:
+    def __init__(self, paper_size, max_lines, template_path):
         self.paper_size = paper_size
         self.max_lines = max_lines
+        self.template_path = template_path
 
 print_paper = {
-    'A4': PaperOptions('A4', 96)
+    'A4P': Paper('A4', 96, 'papercode/templates/sidebar_portrait.html'),
+    'A4L': Paper('A4', 50, 'papercode/templates/sidebar_landscape.html'),
 }
 
 class Position:
@@ -101,7 +103,17 @@ class UtilMethods:
 
     @staticmethod
     def get_pdf_sync(html_code, pdf_file_path):
-        asyncio.get_event_loop().run_until_complete(UtilMethods.get_pdf(html_code, pdf_file_path))
+        retry_limit = 3
+        attempt = 0
+        while(attempt < retry_limit):
+            try:
+                attempt += 1
+                asyncio.get_event_loop().run_until_complete(UtilMethods.get_pdf(html_code, pdf_file_path))
+                break
+            except Exception:
+                if attempt >= retry_limit:
+                    raise Exception('PDF printing maximum retry reached')
+
 
     @staticmethod
     def get_pre_formated_text(partition, lang: Language = Language.Python):

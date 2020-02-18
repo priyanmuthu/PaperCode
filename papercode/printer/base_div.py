@@ -1,4 +1,4 @@
-from papercode.common.utils import UtilMethods
+from papercode.common.utils import UtilMethods, Paper
 from papercode.language.node import Node, ClassNode, FunctionNode, CallNode, InterfaceNode, CommentNode
 from papercode.printer.code_file import CodeFile
 from bs4 import BeautifulSoup
@@ -11,7 +11,7 @@ class BaseDiv:
         self.elements_code_td = {}
         self.elements_sidebar_td = {}
     
-    def generate_html(self, soup: BeautifulSoup):
+    def generate_html(self, soup: BeautifulSoup, paper: Paper):
         pass
 
 class EverythingBaseDiv(BaseDiv):
@@ -21,7 +21,7 @@ class EverythingBaseDiv(BaseDiv):
         self.elements_code_td = {}
         self.elements_sidebar_td = {}
     
-    def generate_html(self, soup: BeautifulSoup):
+    def generate_html(self, soup: BeautifulSoup, paper: Paper):
         # Given soup, Insert the main table
         highlight_table = soup.find('table', {'class': 'highlighttable'})
         partitions = []
@@ -209,7 +209,7 @@ class EmptyBaseDiv(BaseDiv):
         self.elements_code_td = {}
         self.elements_sidebar_td = {}
     
-    def generate_html(self, soup: BeautifulSoup):
+    def generate_html(self, soup: BeautifulSoup, paper: Paper):
         # Given soup, Insert the main table
         highlight_table = soup.find('table', {'class': 'highlighttable'})
         partitions = []
@@ -296,7 +296,7 @@ class BigFunctionBaseDiv(BaseDiv):
         self.elements_sidebar_td = {}
         self.size_limit = 3
     
-    def generate_html(self, soup: BeautifulSoup):
+    def generate_html(self, soup: BeautifulSoup, paper: Paper):
         # Given soup, Insert the main table
         highlight_table = soup.find('table', {'class': 'highlighttable'})
         partitions = []
