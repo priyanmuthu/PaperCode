@@ -56,26 +56,17 @@ class ConfigurableBaseDiv(BaseDiv):
                     visit_dict[pnode] = True
                     block_length = pnode.size
 
-            pnode.print()
-            print('line_count: ', line_count, 'block_length: ', block_length)
-            print(p['base']['line_nos'])
-
             # If the new partition exceeds the page limit and the page gap is not more than half the page
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
-                print('adding page break')
                 # highlight_table.append(self.get_page_break_table_row(soup, max_lines - line_count - 1))
                 highlight_table = self.generate_highlight_table(soup)
                 line_count = 0
-            else:
-                print('skipped page break')
             table_row = self.get_table_row_from_partition(soup, p)
             highlight_table.append(table_row)
             line_count += part_length
             line_count = line_count % max_lines
             # Todo: Write code for page counter
             # If the line count is greater than max_length then increment the page counter and set line count to zero
-            print('new line_count: ', line_count)
-            print('-----------------------------')
 
     def generate_highlight_table(self, soup: BeautifulSoup):
         html_body = soup.find('body')
@@ -215,18 +206,23 @@ class ConfigurableBaseDiv(BaseDiv):
 
     def squash_partitions(self, partitions: list):
         res_partition = []
-        sidebar = None
+        sidebar = {}
         for part in partitions:
             if 'base' in part:
-                if sidebar is not None:
-                    part['sidebar'] = sidebar
-                    sidebar = None
+                if sidebar:
+                    if sidebar['sidebar']['length'] > part['base']['length']:
+                        print('skipping: ', sidebar['sidebar'])
+                        res_partition.append({'base': sidebar['sidebar'], 'node': sidebar['node']})
+                        sidebar = {}
+                    else:
+                        part['sidebar'] = sidebar['sidebar']
+                        sidebar = {}
                 res_partition.append(part)
             elif 'sidebar' in part:
-                sidebar = part['sidebar']
+                sidebar = part
         
-        if sidebar is not None and 'base' in sidebar:
-            res_partition.append(sidebar)
+        if (sidebar):
+            res_partition.append({'base': sidebar['sidebar'], 'node': sidebar['node']})
         return res_partition
     
     def get_table_for_sidebar(self, soup, partitions):
