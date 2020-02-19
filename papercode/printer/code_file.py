@@ -1,6 +1,7 @@
 from papercode.language import parser, structure_visitor
 from papercode.language.node import *
 from papercode.common.utils import UtilMethods, Language, Position
+from toposort import toposort_flatten
 from os.path import abspath
 import jedi
 import json
@@ -141,6 +142,7 @@ class TsCodeFile(CodeFile):
         self.ref_dict = {}
         self.call_func = {}
         self.tsc_path = abspath('../PaperCode/papertsc/dist/app.js')
+        self.class_nodes = []
 
     def process(self):
         self.generate_syntax_tree()
@@ -177,6 +179,7 @@ class TsCodeFile(CodeFile):
             body_start_pos = self.getPositionFromJson(json_obj['body_start_pos'])
             body_end_pos = self.getPositionFromJson(json_obj['body_end_pos'])
             node = ClassNode(None, self.node_dict[json_obj['parentuid']], name, start_pos, end_pos, body_start_pos, body_end_pos)
+            self.class_nodes.append(node)
         elif json_obj['kind'] == 2: # Interface Node
             name = json_obj['name']
             node = InterfaceNode(None, self.node_dict[json_obj['parentuid']], name, start_pos, end_pos, start_pos, end_pos)
@@ -226,6 +229,37 @@ class TsCodeFile(CodeFile):
         
         # Squashing comments:
         self.squash_comments(self.syntax_tree)
+
+        # Topological sort
+        # For each class, perform the topological sort
+        for cNode in self.class_nodes:
+            self.topo_sort(cNode)
+            break
+    
+
+    def topo_sort(self, cnode: ClassNode):
+        # Sort all the functions into topological order
+        functions = []
+        topo_dict= {}
+
+        for child in cnode.children:
+            if type(child) == FunctionNode:
+                functions.append(child)
+        
+        # Setting the defalt topo order:
+        cnode.topo_order = functions
+
+        for func in functions:
+            calls = set()
+            for fcall in func.function_calls:
+                if func != fcall.function_node and fcall.function_node in functions:
+                    calls.add(fcall.function_node)
+            topo_dict[func] = calls
+        
+        try:
+            cnode.topo_order = toposort_flatten(topo_dict, sort=False)
+        except:
+            pass      
 
     
     def squash_comments(self, node: Node):

@@ -14,6 +14,7 @@ class ConfigurableBaseDiv(BaseDiv):
         self.BigCommentLimit = 6
         self.pushSmallComments = True
         self.smallCommentLimit = 2
+        self.toposort = True
 
         # Inner Working
         # node_parition_dict = {}
@@ -35,7 +36,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 part = self.code_file.get_partition(1, end_line, type(root_node))
                 partitions.append({'base': part, 'node': root_node})
 
-        self.getPartitions(root_node, partitions)
+        partitions = self.getPartitions(root_node)
         partitions = self.squash_partitions(partitions)
 
         # Create partition node dict
@@ -46,15 +47,7 @@ class ConfigurableBaseDiv(BaseDiv):
         for p in partitions:
             # base, side bar : create tables seperately for both
             part_length = p['base']['length']
-            pnode = p['node']
-            if type(pnode) == Node or type(pnode) == ClassNode or type(pnode) == CommentNode:
-                block_length = part_length
-            elif type(pnode) == FunctionNode or type(pnode) == InterfaceNode:
-                if pnode in visit_dict:
-                    block_length = part_length
-                else:
-                    visit_dict[pnode] = True
-                    block_length = pnode.size
+            block_length = part_length
 
             # If the new partition exceeds the page limit and the page gap is not more than half the page
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
@@ -64,7 +57,9 @@ class ConfigurableBaseDiv(BaseDiv):
             table_row = self.get_table_row_from_partition(soup, p)
             highlight_table.append(table_row)
             line_count += part_length
-            line_count = line_count % max_lines
+            print('line_count: ', line_count)
+            print(p['base']['line_nos'])
+            line_count = line_count % (max_lines + 3)
             # Todo: Write code for page counter
             # If the line count is greater than max_length then increment the page counter and set line count to zero
 
@@ -164,8 +159,9 @@ class ConfigurableBaseDiv(BaseDiv):
 
             return table_row
     
-    def getPartitions(self, node: Node, partitions: list):
-        if type(node) == Node or type(node) == ClassNode or type(node) == FunctionNode:
+    def getPartitions(self, node: Node):
+        partitions = []
+        if type(node) == Node:
             # Print evenrything except the children
             current_line = node.start_pos.line - 1
             end_line = min(node.end_pos.line, len(self.code_file.all_lines))
@@ -179,14 +175,85 @@ class ConfigurableBaseDiv(BaseDiv):
                     partitions.append({'base': part, 'node': node})
                 
                 # Add the children partition
-                self.getPartitions(child, partitions)
+                partitions.extend(self.getPartitions(child))
                 current_line = child.end_pos.line
             if current_line < end_line:
                 # print('partition (', current_line + 1, ',', end_line, ')')
                 part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
                 partitions.append({'base': part, 'node': node})
                 current_line = end_line
-        elif type(node) == InterfaceNode:
+        elif type(node) == ClassNode:
+            # Print evenrything except the children
+            current_line = node.start_pos.line - 1
+            end_line = min(node.end_pos.line, len(self.code_file.all_lines))
+            children = node.children
+            for child in children:
+                # Adding intermediate lines
+                if current_line < child.start_pos.line - 1:
+                    # Add a new partition
+                    # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
+                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
+                    partitions.append({'base': part, 'node': node})
+                
+                # Add the children partition
+                if type(child) == FunctionNode:
+                    if not self.toposort:
+                        partitions.extend(self.getPartitions(child))
+                else:
+                    partitions.extend(self.getPartitions(child))
+                current_line = child.end_pos.line
+            
+            if self.toposort:
+                for fc in node.topo_order:
+                    partitions.extend(self.getPartitions(fc))
+            
+            if current_line < end_line:
+                # print('partition (', current_line + 1, ',', end_line, ')')
+                part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
+                partitions.append({'base': part, 'node': node})
+                current_line = end_line
+            
+        elif type(node) == InterfaceNode or type(node) == FunctionNode:
+            # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
+            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
+            partitions.append({'base': part, 'node': node})
+        elif type(node) == CallNode:
+            pass
+        elif type(node) == CommentNode:
+            if self.hideBigComments and node.size > self.BigCommentLimit:
+                part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
+                partitions.append({'base': part, 'node': node})
+            elif self.pushSmallComments and node.size <= self.smallCommentLimit:
+                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+                partitions.append({'sidebar': part, 'node': node})
+            else:
+                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+                partitions.append({'base': part, 'node': node})
+        return partitions
+
+    def getPartitions2(self, node: Node, partitions: list):
+        if type(node) == Node or type(node) == ClassNode:
+            # Print evenrything except the children
+            current_line = node.start_pos.line - 1
+            end_line = min(node.end_pos.line, len(self.code_file.all_lines))
+            children = node.children
+            for child in children:
+                # Adding intermediate lines
+                if current_line < child.start_pos.line - 1:
+                    # Add a new partition
+                    # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
+                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
+                    partitions.append({'base': part, 'node': node})
+                
+                # Add the children partition
+                self.getPartitions2(child, partitions)
+                current_line = child.end_pos.line
+            if current_line < end_line:
+                # print('partition (', current_line + 1, ',', end_line, ')')
+                part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
+                partitions.append({'base': part, 'node': node})
+                current_line = end_line
+        elif type(node) == InterfaceNode or type(node) == FunctionNode:
             # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
             partitions.append({'base': part, 'node': node})
@@ -211,7 +278,6 @@ class ConfigurableBaseDiv(BaseDiv):
             if 'base' in part:
                 if sidebar:
                     if sidebar['sidebar']['length'] > part['base']['length']:
-                        print('skipping: ', sidebar['sidebar'])
                         res_partition.append({'base': sidebar['sidebar'], 'node': sidebar['node']})
                         sidebar = {}
                     else:

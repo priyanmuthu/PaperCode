@@ -15,22 +15,20 @@ def run():
 def runts():
     file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')
     project_path = abspath('../PaperCode/papertsc/test/project1/**/*.ts')
-    pdf_file_path = abspath('papercode/temp/pup.pdf')
+    pdf_file_path = abspath('papercode/temp/pup2.pdf')
     html_path = abspath('papercode/temp/high3.html')
     code_file = TsCodeFile(file_path, project_path)
     code_file.process()
     # code_file.print_tree(code_file.syntax_tree)
     # return
     base_div = ConfigurableBaseDiv(code_file)
-    # sidebar_div = None
-    sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
+    sidebar_div = None
+    # sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     code_printer = ConfigurableCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
     html_code = code_printer.print_code_file()
     # html_code = code_printer.get_html()
     # print(html_code)
-    html_file = open(html_path, 'w')
-    html_file.write(html_code)
-    html_file.close()
+    UtilMethods.write_text_to_file(html_path, html_code)
 
 def runpy():
     # file_path = 'papercode/temp/temp.py'

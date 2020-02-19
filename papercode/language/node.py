@@ -27,6 +27,7 @@ class ClassNode(Node):
         self.name = name
         self.body_start_pos = body_start_pos
         self.body_end_pos = body_end_pos
+        self.topo_order = []
     
     def print(self):
         print('ClassNode: ', self.name, 'Parent: ', type(self.parent_node), ' Children: ', len(self.children))
