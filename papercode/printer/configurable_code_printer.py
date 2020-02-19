@@ -8,7 +8,7 @@ from papercode.printer.sidebar_div import SidebarDiv
 class ConfigurableCodePrinter(CodePrinter):
     def __init__(self, pdf_file_path: str, code_file: CodeFile, base_div: BaseDiv, sidebar_div: SidebarDiv):
         super().__init__(pdf_file_path, code_file)
-        self.paper = print_paper['A4L']
+        self.paper = print_paper['A4P']
         self.size_limit = 3
         self.base_div = base_div
         self.sidebar_div = sidebar_div

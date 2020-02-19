@@ -14,7 +14,8 @@ class ConfigurableBaseDiv(BaseDiv):
         self.BigCommentLimit = 6
         self.pushSmallComments = True
         self.smallCommentLimit = 2
-        self.toposort = True
+        self.toposort = False
+        self.PushCommentsInFunction = False
 
         # Inner Working
         # node_parition_dict = {}
@@ -42,7 +43,7 @@ class ConfigurableBaseDiv(BaseDiv):
         # Create partition node dict
         line_count = 0
         max_lines = paper.max_lines
-        visit_dict = {}
+        # visit_dict = {}
 
         for p in partitions:
             # base, side bar : create tables seperately for both
@@ -213,63 +214,88 @@ class ConfigurableBaseDiv(BaseDiv):
                 partitions.append({'base': part, 'node': node})
                 current_line = end_line
             
-        elif type(node) == InterfaceNode or type(node) == FunctionNode:
+        elif type(node) == InterfaceNode:
             # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
             partitions.append({'base': part, 'node': node})
+        elif type(node) == FunctionNode:
+            if self.PushCommentsInFunction:
+                partitions.append(self.getFunctionPartition(node))
+            else:
+                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
+                partitions.append({'base': part, 'node': node})
         elif type(node) == CallNode:
             pass
         elif type(node) == CommentNode:
-            if self.hideBigComments and node.size > self.BigCommentLimit:
-                part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
-                partitions.append({'base': part, 'node': node})
-            elif self.pushSmallComments and node.size <= self.smallCommentLimit:
-                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
-                partitions.append({'sidebar': part, 'node': node})
-            else:
-                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
-                partitions.append({'base': part, 'node': node})
+            partitions.append(self.getCommentPartition(node))
         return partitions
-
-    def getPartitions2(self, node: Node, partitions: list):
-        if type(node) == Node or type(node) == ClassNode:
-            # Print evenrything except the children
-            current_line = node.start_pos.line - 1
-            end_line = min(node.end_pos.line, len(self.code_file.all_lines))
-            children = node.children
-            for child in children:
-                # Adding intermediate lines
-                if current_line < child.start_pos.line - 1:
-                    # Add a new partition
-                    # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
-                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
-                    partitions.append({'base': part, 'node': node})
-                
-                # Add the children partition
-                self.getPartitions2(child, partitions)
-                current_line = child.end_pos.line
-            if current_line < end_line:
-                # print('partition (', current_line + 1, ',', end_line, ')')
-                part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
-                partitions.append({'base': part, 'node': node})
-                current_line = end_line
-        elif type(node) == InterfaceNode or type(node) == FunctionNode:
-            # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
-            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
-            partitions.append({'base': part, 'node': node})
-        elif type(node) == CallNode:
-            pass
-        elif type(node) == CommentNode:
-            if self.hideBigComments and node.size > self.BigCommentLimit:
-                part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
-                partitions.append({'base': part, 'node': node})
-            elif self.pushSmallComments and node.size <= self.smallCommentLimit:
-                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
-                partitions.append({'sidebar': part, 'node': node})
+    
+    def getFunctionPartition(self, node: FunctionNode):
+        # Print evenrything except the children
+        line_nos = []
+        source_code_lines = []
+        sidebar_line_nos = []
+        sidebar_code = []
+        current_line = node.start_pos.line - 1
+        end_line = min(node.end_pos.line, len(self.code_file.all_lines))
+        children = node.children
+        for child in children:
+            # Adding intermediate lines
+            if current_line < child.start_pos.line - 1:
+                # Add a new partition
+                # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
+                part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
+                line_nos.extend(part['line_nos'])
+                source_code_lines.extend(part['source_code_lines'])
+            
+            # Add the comment partition
+            commentPart = self.getCommentPartition(child)
+            if 'base' in commentPart:
+                line_nos.extend(commentPart['base']['line_nos'])
+                source_code_lines.extend(commentPart['base']['source_code_lines'])
             else:
-                part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
-                partitions.append({'base': part, 'node': node})
-        return
+                remaining_lines = len(line_nos) - len(sidebar_line_nos)
+                if remaining_lines > 0:
+                    sidebar_line_nos.extend([' ' for i in range(remaining_lines)])
+                    sidebar_code.extend([' ' for i in range(remaining_lines)])
+                # adding to sidebar
+                sidebar_line_nos.extend(commentPart['sidebar']['line_nos'])
+                sidebar_code.extend(commentPart['sidebar']['source_code_lines'])
+
+            current_line = child.end_pos.line
+        if current_line < end_line:
+            # print('partition (', current_line + 1, ',', end_line, ')')
+            part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
+            line_nos.extend(part['line_nos'])
+            source_code_lines.extend(part['source_code_lines'])
+            current_line = end_line
+        
+        sidebar_part = {
+            'line_nos': sidebar_line_nos, 
+            'source_code_lines': sidebar_code, 
+            'length': len(sidebar_line_nos), 
+            'partition_type': CommentNode
+            }
+        
+        base_part = {
+            'line_nos': line_nos, 
+            'source_code_lines': source_code_lines, 
+            'length': max(len(line_nos), len(sidebar_line_nos)), 
+            'partition_type': FunctionNode
+            }
+
+        return {'base': base_part, 'node': node, 'sidebar': sidebar_part}
+
+    def getCommentPartition(self, node: CommentNode):
+        if self.hideBigComments and node.size > self.BigCommentLimit:
+            part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
+            return {'base': part, 'node': node}
+        elif self.pushSmallComments and node.size <= self.smallCommentLimit:
+            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+            return {'sidebar': part, 'node': node}
+        else:
+            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
+            return {'base': part, 'node': node}
 
     def squash_partitions(self, partitions: list):
         res_partition = []
