@@ -18,7 +18,7 @@ class Paper:
         self.template_path = template_path
 
 print_paper = {
-    'A4P': Paper('A4', 96, 'papercode/templates/sidebar_portrait.html'),
+    'A4P': Paper('A4', 90, 'papercode/templates/sidebar_portrait.html'),
     'A4L': Paper('A4', 50, 'papercode/templates/sidebar_landscape.html'),
 }
 
