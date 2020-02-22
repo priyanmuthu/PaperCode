@@ -234,7 +234,6 @@ class TsCodeFile(CodeFile):
         # For each class, perform the topological sort
         for cNode in self.class_nodes:
             self.topo_sort(cNode)
-            break
     
 
     def topo_sort(self, cnode: ClassNode):
