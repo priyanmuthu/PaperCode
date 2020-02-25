@@ -1,3 +1,19 @@
+☐ Table of contents
+☐ remove emplty lines
+☐ Git Diff
+☐ Line wrap
+    USE :
+    white-space: pre-wrap;
+    https://stackoverflow.com/questions/248011/how-do-i-wrap-text-in-a-pre-tag
+    But this spoils a lot of alignment -> need to fix it
+☐ Header and footer with metadata
+    Can be done using puppeteer options:
+    https://github.com/puppeteer/puppeteer/blob/v2.1.1/docs/api.md#pagepdfoptions
+    
+
+
+
+-----------------------------------------------
 ☐ Exploration
 ☐ libcst get reference information
     ✔ For every function call - jump to definition @done(20-01-29 13:12)

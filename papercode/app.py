@@ -7,10 +7,36 @@ from papercode.printer.sidebar_code_printer import SidebarCodePrinter
 from papercode.printer.configurable_code_printer import ConfigurableCodePrinter
 from papercode.common.utils import UtilMethods, Language
 from os.path import abspath
+import difflib
 
 def run():
     # runpy()
     runts()
+    # file_compare_test()
+    # pdf_test()
+
+def pdf_test():
+    pdf_file_path = abspath('papercode/temp/pup2.pdf')
+    raw = parser.from_file(pdf_file_path)
+    print(raw['content'])
+
+def file_compare_test():
+    # https://stackoverflow.com/questions/9505822/getting-line-numbers-that-were-changed
+    # + for add - for delete maybe use ? ??
+    file_path_1 = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')
+    file_path_2 = abspath('../PaperCode/papertsc/test/pytutor.ts')
+
+    f1 = open(file_path_1, 'r')
+    f1_lines = f1.readlines()
+    f1.close()
+
+    f2 = open(file_path_2, 'r')
+    f2_lines = f2.readlines()
+    f2.close()
+
+    diff = difflib.ndiff(f1_lines, f2_lines)
+    for line in diff:
+        print(line)
 
 def runts():
     file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')

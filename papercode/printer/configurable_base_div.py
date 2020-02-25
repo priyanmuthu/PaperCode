@@ -14,8 +14,9 @@ class ConfigurableBaseDiv(BaseDiv):
         self.BigCommentLimit = 6
         self.pushSmallComments = True
         self.smallCommentLimit = 2
-        self.toposort = False
-        self.PushCommentsInFunction = False
+        self.toposort = True
+        self.PushCommentsInFunction = True
+        self.RemoveEmptyLines = True
 
         # Inner Working
         # node_parition_dict = {}
@@ -38,6 +39,10 @@ class ConfigurableBaseDiv(BaseDiv):
                 partitions.append({'base': part, 'node': root_node})
 
         partitions = self.getPartitions(root_node)
+        
+        # Post process
+        if self.RemoveEmptyLines:
+            partitions = self.remove_empty_partitions(partitions)
         partitions = self.squash_partitions(partitions)
 
         # Create partition node dict
@@ -58,9 +63,9 @@ class ConfigurableBaseDiv(BaseDiv):
             table_row = self.get_table_row_from_partition(soup, p)
             highlight_table.append(table_row)
             line_count += part_length
-            print('line_count: ', line_count)
-            print(p['base']['line_nos'])
-            line_count = line_count % (max_lines + 3)
+            # print('line_count: ', line_count)
+            # print(p['base']['line_nos'])
+            line_count = line_count % (max_lines)
             # Todo: Write code for page counter
             # If the line count is greater than max_length then increment the page counter and set line count to zero
 
@@ -68,6 +73,7 @@ class ConfigurableBaseDiv(BaseDiv):
         html_body = soup.find('body')
         table = soup.new_tag('table')
         table['class'] = ['highlighttable']
+        table['cellspacing'] = "0"
         html_body.append(table)
         return table
 
@@ -149,7 +155,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 self.elements_sidebar_td[part['node']] = part_uuid + '-sidebar'
                 sidebar_table_data['id'] = self.elements_sidebar_td[part['node']]
             sidebar_table_data['class'] = ['sidebar']
-            if 'sidebar' in part:
+            if 'sidebar' in part and part['sidebar']['length'] > 0:
                 side_table = self.get_table_for_sidebar(soup, [part['sidebar']])
                 sidebar_table_data.append(side_table)
 
@@ -288,7 +294,7 @@ class ConfigurableBaseDiv(BaseDiv):
 
     def getCommentPartition(self, node: CommentNode):
         if self.hideBigComments and node.size > self.BigCommentLimit:
-            part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, '// ** LARGE COMMENT HIDDEN **', CommentNode)
+            part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, ' // ** LARGE COMMENT HIDDEN **', CommentNode)
             return {'base': part, 'node': node}
         elif self.pushSmallComments and node.size <= self.smallCommentLimit:
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
@@ -297,12 +303,25 @@ class ConfigurableBaseDiv(BaseDiv):
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
             return {'base': part, 'node': node}
 
+    def remove_empty_partitions(self, partitions: list):
+        res_partition = []
+        for part in partitions:
+            if 'base' not in part:
+                res_partition.append(part)
+                continue
+            base_part = part['base']
+            if base_part['length'] == 1 and base_part['source_code_lines'][0].strip() == '':
+                continue
+            res_partition.append(part)
+
+        return res_partition
+
     def squash_partitions(self, partitions: list):
         res_partition = []
         sidebar = {}
         for part in partitions:
             if 'base' in part:
-                if sidebar:
+                if sidebar != {}:
                     if sidebar['sidebar']['length'] > part['base']['length']:
                         res_partition.append({'base': sidebar['sidebar'], 'node': sidebar['node']})
                         sidebar = {}
@@ -311,6 +330,9 @@ class ConfigurableBaseDiv(BaseDiv):
                         sidebar = {}
                 res_partition.append(part)
             elif 'sidebar' in part:
+                if sidebar != {}:
+                    res_partition.append({'base': sidebar['sidebar'], 'node': sidebar['node']})
+                    sidebar = {}
                 sidebar = part
         
         if (sidebar):
@@ -319,6 +341,8 @@ class ConfigurableBaseDiv(BaseDiv):
     
     def get_table_for_sidebar(self, soup, partitions):
         side_table = soup.new_tag('table')
+        side_table['class'] = ['sidebartable']
+        side_table['cellspacing'] = "0"
         for p in partitions:
             _, pcode = UtilMethods.get_pre_formated_text(p, self.code_file.language)
             line_str = '<pre>' + '\n'.join(str(lno) for lno in p['line_nos']) + '</pre>'
