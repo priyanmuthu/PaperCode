@@ -102,7 +102,7 @@ class UtilMethods:
             # 'format': 'A4',
             'preferCSSPageSize': True,
             'printBackground': True,
-            # 'displayHeaderFooter': True,
+            'displayHeaderFooter': True,
             'margin': { 'top': "1cm", 'bottom': "1cm", 'left': "0.25cm", 'right': "0.25cm" }
         })
         await browser.close()

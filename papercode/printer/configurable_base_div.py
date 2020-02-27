@@ -88,10 +88,6 @@ class ConfigurableBaseDiv(BaseDiv):
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 page_count += 1
                 line_count = 0
-            
-            # Debug print
-            line_nos = p['base']['line_nos']
-            print(line_nos[0], '...', line_nos[-1], ' @ ', page_count)
 
             if p['node'] not in self.node_page_dict:
                 self.node_page_dict[p['node']] = page_count
@@ -114,7 +110,6 @@ class ConfigurableBaseDiv(BaseDiv):
                 cfunc_line = cfunc.start_pos.line
                 cfunc_page = self.node_page_dict[cfunc]
                 call_locs[call_line] = '{0} is defined at page {1}, line {2}'.format(cfunc.name, cfunc_page, cfunc_line)
-                print(call_locs[call_line])
             # go through the partition and check if the call line already has any stuff in it
             for i in range(func_base_part['length']):
                 lno = func_base_part['line_nos'][i]
@@ -177,6 +172,10 @@ class ConfigurableBaseDiv(BaseDiv):
         # code_base = code_base.splitlines()[:base_part['length']]
         # code_base = '\n'.join(code_base)
         line_str = '<pre>' + '\n'.join(str(lno) for lno in base_part['line_nos']) + '</pre>'
+        if base_part['partition_type'] == FunctionNode:
+            lines = [str(lno) for lno in base_part['line_nos']]
+            lines[0] = '<span class="boldlinenos">' + lines[0] + '</span>'
+            line_str = '<pre>' + '\n'.join(lines) + '</pre>'
         
         # Generating the line no div
         line_no_div = soup.new_tag('div')
@@ -233,7 +232,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 if current_line < child.start_pos.line - 1:
                     # Add a new partition
                     # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
-                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
+                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, Node)
                     partitions.append({'base': part, 'node': node})
                 
                 # Add the children partition
@@ -241,7 +240,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 current_line = child.end_pos.line
             if current_line < end_line:
                 # print('partition (', current_line + 1, ',', end_line, ')')
-                part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
+                part = self.code_file.get_partition(current_line + 1 , end_line, Node)
                 partitions.append({'base': part, 'node': node})
                 current_line = end_line
         elif type(node) == ClassNode:
@@ -254,7 +253,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 if current_line < child.start_pos.line - 1:
                     # Add a new partition
                     # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
-                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, type(node))
+                    part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, ClassNode)
                     partitions.append({'base': part, 'node': node})
                 
                 # Add the children partition
@@ -271,17 +270,17 @@ class ConfigurableBaseDiv(BaseDiv):
             
             if current_line < end_line:
                 # print('partition (', current_line + 1, ',', end_line, ')')
-                part = self.code_file.get_partition(current_line + 1 , end_line, type(node))
+                part = self.code_file.get_partition(current_line + 1 , end_line, ClassNode)
                 partitions.append({'base': part, 'node': node})
                 current_line = end_line
             
         elif type(node) == InterfaceNode:
             # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
-            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
+            part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, InterfaceNode)
             partitions.append({'base': part, 'node': node})
         elif type(node) == FunctionNode:
             if self.PushCommentsInFunction:
-                 function_partition = self.getFunctionPartition(node)
+                function_partition = self.getFunctionPartition(node)
             else:
                 part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
                 function_partition = {'base': part, 'node': node}
