@@ -120,6 +120,16 @@ class UtilMethods:
                 if attempt >= retry_limit:
                     raise Exception('PDF printing maximum retry reached')
 
+    @staticmethod
+    def get_preformated_innerhtml(code: str, lang: Language = Language.Python):
+        partition_html = UtilMethods.highlight(code, lang)
+        soup = BeautifulSoup(partition_html, 'html.parser')
+        res = soup.find('table')
+        td_line_nos = res.find('td')
+        td_code = td_line_nos.find_next_sibling()
+        code_preformated_text = td_code.find('pre')
+        code_innerhtml = code_preformated_text.decode_contents().splitlines()
+        return code_innerhtml
 
     @staticmethod
     def get_pre_formated_text(partition, lang: Language = Language.Python):

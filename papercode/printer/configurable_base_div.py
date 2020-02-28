@@ -28,7 +28,7 @@ class ConfigurableBaseDiv(BaseDiv):
     def generate_html(self, soup: BeautifulSoup, paper: Paper):
         # Given soup, Insert the main table
         # html_body = soup.find('body')
-        highlight_table = self.generate_highlight_table(soup)
+        # highlight_table = self.generate_highlight_table(soup)
         partitions = []
 
         # Start from the root and recursively generate partitions
@@ -56,28 +56,154 @@ class ConfigurableBaseDiv(BaseDiv):
         # Create partition node dict
         line_count = 0
         max_lines = paper.max_lines
-        # visit_dict = {}
+        
+        # Manual page split
+        page_count = 1
+        pages = {}
+        page_metadata = {}
+
+        page_line_nos = []
+        page_code_lines = []
+        page_sidebar_line_nos = []
+        page_sidebar_code_lines = []
 
         for p in partitions:
-            # base, side bar : create tables seperately for both
             part_length = p['base']['length']
             block_length = part_length
 
-            # If the new partition exceeds the page limit and the page gap is not more than half the page
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
-                highlight_table = self.generate_highlight_table(soup)
+                # Start a new page
+                pages[page_count] = {
+                    'line_nos': page_line_nos, 
+                    'source_code_lines': page_code_lines,
+                    'sidebar_line_nos': page_sidebar_line_nos,
+                    'sidebar_code_lines': page_sidebar_code_lines,
+                    'length': len(page_line_nos)
+                    }
+                page_count += 1
+                page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
                 line_count = 0
-            table_row = self.get_table_row_from_partition(soup, p)
+            
+            line_nos = p['base']['line_nos']
+            code_lines = p['base']['format_code_lines']
+            sidebar_line_nos = None
+            sidebar_code_lines = None
+            sidebar_length = 0
+            if 'sidebar' in p:
+                sidebar_line_nos = p['sidebar']['line_nos']
+                sidebar_code_lines = p['sidebar']['format_code_lines']
+                sidebar_length = p['sidebar']['length']
+
+            for i in range(part_length):
+                if (line_count + 1) > max_lines:
+                    pages[page_count] = {
+                    'line_nos': page_line_nos, 
+                    'source_code_lines': page_code_lines,
+                    'sidebar_line_nos': page_sidebar_line_nos,
+                    'sidebar_code_lines': page_sidebar_code_lines,
+                    'length': len(page_line_nos)
+                    }
+                    page_count += 1
+                    page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
+                    line_count = 0
+                line_count += 1
+                page_line_nos.append(line_nos[i])
+                page_code_lines.append(code_lines[i])
+                if sidebar_line_nos and sidebar_code_lines and i < sidebar_length:
+                    page_sidebar_line_nos.append(sidebar_line_nos[i])
+                    page_sidebar_code_lines.append(sidebar_code_lines[i])
+                else:
+                    page_sidebar_line_nos.append('')
+                    page_sidebar_code_lines.append('')
+
+        self.add_pages_html(soup, pages)
+
+        
+    def add_pages_html(self, soup: BeautifulSoup, pages: dict):
+        
+        for page in pages:
+            highlight_table = self.generate_highlight_table(soup)
+            page_length = pages[page]['length']
+            print(page_length)
+            page_line_nos = pages[page]['line_nos']
+            page_code_lines = pages[page]['source_code_lines']
+            page_sidebar_line_nos = pages[page]['sidebar_line_nos']
+            page_sidebar_code_lines = pages[page]['sidebar_code_lines']
+
+            # For each line create a table row
+            line_str = '<pre>' + '\n'.join(str(lno) for lno in page_line_nos) + '</pre>'
+            code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
+            
+            # Generating the line no div
+            line_no_div = soup.new_tag('div')
+            line_no_div['class'] = ['linenodiv']
+            line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
+            
+            # Generating the line no td
+            line_table_data = soup.new_tag('td')
+            line_table_data['class'] = ['linenos']
+            line_table_data.append(line_no_div)
+
+            # Generating the code highlight div
+            highlight_div = soup.new_tag('div')
+            highlight_div['class'] = ['highlight']
+            highlight_div.append(BeautifulSoup(code_str, 'html.parser'))
+
+            # Generating the code td
+            code_table_data = soup.new_tag('td')
+            code_table_data['class'] = ['code']
+            code_table_data.append(highlight_div)
+
+            # Generating the side bar table
+            sidebar_table_data = soup.new_tag('td')
+            sidebar_table_data['class'] = ['sidebar']
+            side_table = self.get_pages_sidebar(page_sidebar_line_nos, page_sidebar_code_lines, soup)
+            sidebar_table_data.append(side_table)
+
+            table_row = soup.new_tag('tr')
+            table_row.append(line_table_data)
+            table_row.append(code_table_data)
+            table_row.append(sidebar_table_data)
             highlight_table.append(table_row)
-            line_count += part_length
-            line_count = line_count % (max_lines)
+    
+    def get_pages_sidebar(self, sidebar_line_nos: list, sidebar_code_lines: list, soup: BeautifulSoup):
+        side_table = soup.new_tag('table')
+        side_table['class'] = ['sidebartable']
+        side_table['cellspacing'] = "0"
+
+        line_str = '<pre>' + '\n'.join(str(lno) for lno in sidebar_line_nos) + '</pre>'
+        code_str = '<pre>' + '\n'.join(sidebar_code_lines) + '</pre>'
+            
+        # Generating the table row
+        line_no_div = soup.new_tag('div')
+        line_no_div['class'] = ['linenodiv']
+        line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
+
+        line_table_data = soup.new_tag('td')
+        line_table_data['class'] = ['sidelinenos']
+        line_table_data.append(line_no_div)
+
+
+        highlight_div = soup.new_tag('div')
+        highlight_div['class'] = ['highlight']
+        highlight_div.append(BeautifulSoup(code_str, 'html.parser'))
+
+        code_table_data = soup.new_tag('td')
+        code_table_data['class'] = ['code']
+        code_table_data.append(highlight_div)
+
+        table_row = soup.new_tag('tr')
+        table_row.append(line_table_data)
+        table_row.append(code_table_data)
+
+        side_table.append(table_row)
+        return side_table
 
     def pre_calculcate_pages(self, partitions: list, paper: Paper):
         # Create partition node dict
         page_count = 1
         line_count = 0
         max_lines = paper.max_lines
-        # self.node_page_dict
 
         for p in partitions:
             # base, side bar : create tables seperately for both
@@ -109,15 +235,16 @@ class ConfigurableBaseDiv(BaseDiv):
                 cfunc = call.function_node
                 cfunc_line = cfunc.start_pos.line
                 cfunc_page = self.node_page_dict[cfunc]
-                call_locs[call_line] = '{0} is defined at page {1}, line {2}'.format(cfunc.name, cfunc_page, cfunc_line)
+                call_locs[call_line] = '{0} : page {1}, line {2}'.format(cfunc.name, cfunc_page, cfunc_line)
             # go through the partition and check if the call line already has any stuff in it
             for i in range(func_base_part['length']):
                 lno = func_base_part['line_nos'][i]
                 sidebar_scl = func_sidebar['source_code_lines'][i]
                 if lno in call_locs and sidebar_scl.strip() == '':
+                    print(call_locs[call_line])
                     func_sidebar['source_code_lines'][i] = call_locs[lno]
+                    func_sidebar['format_code_lines'][i] = call_locs[lno]
         return partitions
-
 
     def generate_highlight_table(self, soup: BeautifulSoup):
         html_body = soup.find('body')
@@ -128,42 +255,6 @@ class ConfigurableBaseDiv(BaseDiv):
         return table
 
 
-    def get_page_break_table_row(self, soup: BeautifulSoup, remaining_lines):
-        # page_break_p = '<tr style="page-break-after: always"></tr>'
-        # empty_str = '<pre>' + '\n'.join('' for i in range(remaining_lines)) + '<p style="page-break-before: always"></p>' + '</pre>'
-        empty_str = '<pre>' + '\n'.join('' for i in range(remaining_lines)) + '</pre>'
-        
-        # Generating the line no div
-        line_no_div = soup.new_tag('div')
-        line_no_div['class'] = ['linenodiv']
-        line_no_div.append(BeautifulSoup(empty_str, 'html.parser'))
-        
-        # Generating the line no td
-        line_table_data = soup.new_tag('td')
-        line_table_data['class'] = ['linenos']
-        line_table_data.append(line_no_div)
-
-        # Generating the code highlight div
-        highlight_div = soup.new_tag('div')
-        highlight_div['class'] = ['highlight']
-        highlight_div.append(BeautifulSoup(empty_str, 'html.parser'))
-
-        # Generating the code td
-        code_table_data = soup.new_tag('td')
-        code_table_data['class'] = ['code']
-        code_table_data.append(highlight_div)
-
-        # Sidebar td
-        sidebar_table_data = soup.new_tag('td')
-
-        table_row = soup.new_tag('tr')
-        table_row['style'] = ['page-break-before: always']
-        table_row.append(line_table_data)
-        table_row.append(code_table_data)
-        table_row.append(sidebar_table_data)
-
-        return table_row
-
     def get_table_row_from_partition(self, soup: BeautifulSoup, part: dict):
         # Making the base
         base_part = part['base']
@@ -172,6 +263,7 @@ class ConfigurableBaseDiv(BaseDiv):
         # code_base = code_base.splitlines()[:base_part['length']]
         # code_base = '\n'.join(code_base)
         line_str = '<pre>' + '\n'.join(str(lno) for lno in base_part['line_nos']) + '</pre>'
+        
         if base_part['partition_type'] == FunctionNode:
             lines = [str(lno) for lno in base_part['line_nos']]
             lines[0] = '<span class="boldlinenos">' + lines[0] + '</span>'
@@ -343,14 +435,16 @@ class ConfigurableBaseDiv(BaseDiv):
             'line_nos': sidebar_line_nos, 
             'source_code_lines': sidebar_code, 
             'length': len(sidebar_line_nos), 
-            'partition_type': CommentNode
+            'partition_type': CommentNode,
+            'format_code_lines': UtilMethods.get_preformated_innerhtml('\n'.join(sidebar_code), self.code_file.language)
             }
         
         base_part = {
             'line_nos': line_nos, 
             'source_code_lines': source_code_lines, 
             'length': max(len(line_nos), len(sidebar_line_nos)), 
-            'partition_type': FunctionNode
+            'partition_type': FunctionNode,
+            'format_code_lines': UtilMethods.get_preformated_innerhtml('\n'.join(source_code_lines), self.code_file.language)
             }
 
         return {'base': base_part, 'node': node, 'sidebar': sidebar_part}

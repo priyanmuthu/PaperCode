@@ -17,6 +17,7 @@ class CodeFile:
         self.all_lines_process()
         self.syntax_tree = None
         self.language = lang
+        self.preformated_all_lines = UtilMethods.get_preformated_innerhtml('\n'.join(self.all_lines), self.language)
     
     def all_lines_process(self):
         for idx in range(len(self.all_lines)):
@@ -44,21 +45,25 @@ class CodeFile:
     def get_partition(self, start_line, end_line, partition_type):
         line_nos = [i for i in range(start_line, end_line+1)]
         source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
+        format_code_lines = list(map(lambda x: self.preformated_all_lines[x-1], line_nos))
         return {
             'line_nos': line_nos, 
             'source_code_lines': source_code_lines, 
             'length': len(line_nos), 
-            'partition_type': partition_type
+            'partition_type': partition_type,
+            'format_code_lines': format_code_lines
             }
     
     def get_hidden_comment_node(self, start_line, end_line, hide_string, partition_type):
         line_nos = [start_line]
         source_code_lines = [hide_string]
+        format_code_lines = ['<span class="c1">' + hide_string + '</span>']
         return {
             'line_nos': line_nos, 
             'source_code_lines': source_code_lines, 
             'length': len(line_nos), 
-            'partition_type': partition_type
+            'partition_type': partition_type,
+            'format_code_lines': format_code_lines
             }
 
     def get_partition_from_node(self, cst_node):
