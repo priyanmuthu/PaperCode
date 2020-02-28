@@ -17,6 +17,7 @@ class ConfigurableBaseDiv(BaseDiv):
         self.toposort = True
         self.PushCommentsInFunction = True
         self.RemoveEmptyLines = True
+        self.BoldFunctionStartLine = True
 
         # Inner Working
         self.node_parition_dict = {}
@@ -84,7 +85,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
                 line_count = 0
             
-            line_nos = p['base']['line_nos']
+            line_nos = [str(lno) for lno in p['base']['line_nos']]
             code_lines = p['base']['format_code_lines']
             sidebar_line_nos = None
             sidebar_code_lines = None
@@ -93,6 +94,10 @@ class ConfigurableBaseDiv(BaseDiv):
                 sidebar_line_nos = p['sidebar']['line_nos']
                 sidebar_code_lines = p['sidebar']['format_code_lines']
                 sidebar_length = p['sidebar']['length']
+
+            if self.BoldFunctionStartLine:
+                if p['base']['partition_type'] == FunctionNode:
+                    line_nos[0] = '<span class="boldlinenos">' + line_nos[0] + '</span>'
 
             for i in range(part_length):
                 if (line_count + 1) > max_lines:
@@ -131,7 +136,7 @@ class ConfigurableBaseDiv(BaseDiv):
             page_sidebar_code_lines = pages[page]['sidebar_code_lines']
 
             # For each line create a table row
-            line_str = '<pre>' + '\n'.join(str(lno) for lno in page_line_nos) + '</pre>'
+            line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
             code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
             
             # Generating the line no div
