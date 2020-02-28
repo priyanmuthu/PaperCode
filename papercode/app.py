@@ -58,19 +58,24 @@ def runts():
 
 def runpy():
     # file_path = 'papercode/temp/temp.py'
-    file_path = 'papercode/temp/temp2.py'
-    # file_path = 'papercode/temp/fpdf.py'
+    # file_path = 'papercode/temp/temp2.py'
+    html_path = 'papercode/temp/high.html'
+    file_path = 'papercode/temp/fpdf.py'
     # file_path = 'D:/PV/Research/PaperCode/papertsc/temp/project1/pytutor.ts'
     # template_path = 'papercode/templates/template2.html'
     pdf_file_path = 'papercode/temp/pup.pdf'
     code_file = PyCodeFile(file_path)
-    code_file.process()    
-    base_div = EverythingBaseDiv(code_file)
+    code_file.process()
+    # code_file.print_tree(code_file.syntax_tree)
+    base_div = ConfigurableBaseDiv(code_file)
+    # base_div = EverythingBaseDiv(code_file)
     # sidebar_div = SmallFunctionSidebarDiv(base_div, code_file, 3)
     # base_div = BigFunctionBaseDiv(code_file)
     # sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     sidebar_div = None
-    code_printer = SidebarCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
+    # code_printer = SidebarCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
+    code_printer = ConfigurableCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
     # print(code_printer.get_html())
     html_code = code_printer.print_code_file()
-    print(html_code)
+    # print(html_code)
+    UtilMethods.write_text_to_file(html_path, html_code)

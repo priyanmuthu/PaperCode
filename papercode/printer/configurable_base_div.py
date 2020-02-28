@@ -71,7 +71,6 @@ class ConfigurableBaseDiv(BaseDiv):
         for p in partitions:
             part_length = p['base']['length']
             block_length = part_length
-
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 # Start a new page
                 pages[page_count] = {
@@ -84,7 +83,6 @@ class ConfigurableBaseDiv(BaseDiv):
                 page_count += 1
                 page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
                 line_count = 0
-            
             line_nos = [str(lno) for lno in p['base']['line_nos']]
             code_lines = p['base']['format_code_lines']
             sidebar_line_nos = None
@@ -102,12 +100,12 @@ class ConfigurableBaseDiv(BaseDiv):
             for i in range(part_length):
                 if (line_count + 1) > max_lines:
                     pages[page_count] = {
-                    'line_nos': page_line_nos, 
-                    'source_code_lines': page_code_lines,
-                    'sidebar_line_nos': page_sidebar_line_nos,
-                    'sidebar_code_lines': page_sidebar_code_lines,
-                    'length': len(page_line_nos)
-                    }
+                        'line_nos': page_line_nos, 
+                        'source_code_lines': page_code_lines,
+                        'sidebar_line_nos': page_sidebar_line_nos,
+                        'sidebar_code_lines': page_sidebar_code_lines,
+                        'length': len(page_line_nos)
+                        }
                     page_count += 1
                     page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
                     line_count = 0
@@ -121,6 +119,19 @@ class ConfigurableBaseDiv(BaseDiv):
                     page_sidebar_line_nos.append('')
                     page_sidebar_code_lines.append('')
 
+        if len(page_line_nos) > 0:
+            # There are still some code left
+            pages[page_count] = {
+                'line_nos': page_line_nos, 
+                'source_code_lines': page_code_lines,
+                'sidebar_line_nos': page_sidebar_line_nos,
+                'sidebar_code_lines': page_sidebar_code_lines,
+                'length': len(page_line_nos)
+                }
+            page_count += 1
+            page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
+            line_count = 0
+
         self.add_pages_html(soup, pages)
 
         
@@ -129,12 +140,11 @@ class ConfigurableBaseDiv(BaseDiv):
         for page in pages:
             highlight_table = self.generate_highlight_table(soup)
             page_length = pages[page]['length']
-            print(page_length)
             page_line_nos = pages[page]['line_nos']
             page_code_lines = pages[page]['source_code_lines']
             page_sidebar_line_nos = pages[page]['sidebar_line_nos']
             page_sidebar_code_lines = pages[page]['sidebar_code_lines']
-
+            print(page_line_nos)
             # For each line create a table row
             line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
             code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
@@ -238,15 +248,17 @@ class ConfigurableBaseDiv(BaseDiv):
             for call in func.function_calls:
                 call_line = call.start_pos.line
                 cfunc = call.function_node
+                if call.function_node is None:
+                    continue
                 cfunc_line = cfunc.start_pos.line
                 cfunc_page = self.node_page_dict[cfunc]
                 call_locs[call_line] = '{0} : page {1}, line {2}'.format(cfunc.name, cfunc_page, cfunc_line)
+                # print(call_locs[call_line])
             # go through the partition and check if the call line already has any stuff in it
             for i in range(func_base_part['length']):
                 lno = func_base_part['line_nos'][i]
                 sidebar_scl = func_sidebar['source_code_lines'][i]
                 if lno in call_locs and sidebar_scl.strip() == '':
-                    print(call_locs[call_line])
                     func_sidebar['source_code_lines'][i] = call_locs[lno]
                     func_sidebar['format_code_lines'][i] = call_locs[lno]
         return partitions

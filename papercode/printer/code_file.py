@@ -36,9 +36,13 @@ class CodeFile:
             print('', tabspaces ,'Interface: ', node.name, ' @ ', node.start_pos.line)
         elif type(node) == FunctionNode:
             print('', tabspaces ,'Function: ', node.name, ' @ ', node.start_pos.line)
+            for call in node.function_calls:
+                self.print_tree(call, tabspaces + '\t')
         elif type(node) == CommentNode:
             print('', tabspaces ,'Comment @ ', node.start_pos, ' - ', node.end_pos)
-        
+        elif type(node) == CallNode:
+            print('', tabspaces, 'Call @', node.start_pos, ' - ', node.end_pos)
+
         for child in node.children:
             self.print_tree(child, tabspaces + '\t')
 
@@ -96,7 +100,7 @@ class PyCodeFile(CodeFile):
         if self.syntax_tree is None:
             return
         functions = []
-        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node, ClassNode, CallNode], functions)
+        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node, ClassNode, CallNode, CommentNode, InterfaceNode], functions)
         function_line_dict = {f.start_pos.line : f for f in functions}
         # print(function_line_dict)
         for func in functions:
@@ -116,6 +120,39 @@ class PyCodeFile(CodeFile):
                 fc.function_node = qf
                 fc.from_function_node = func
                 qf.refs.append(fc)
+        
+        # Topological sort for each node
+        class_nodes = []
+        UtilMethods.flatten_syntax_tree(self.syntax_tree, [Node, FunctionNode, CallNode, CommentNode, InterfaceNode], class_nodes)
+        for cNode in class_nodes:
+            self.topo_sort(cNode)
+        
+        # Todo: Squach comments
+        
+    
+    def topo_sort(self, cnode: ClassNode):
+        # Sort all the functions into topological order
+        functions = []
+        topo_dict= {}
+
+        for child in cnode.children:
+            if type(child) == FunctionNode:
+                functions.append(child)
+        
+        # Setting the defalt topo order:
+        cnode.topo_order = functions
+
+        for func in functions:
+            calls = set()
+            for fcall in func.function_calls:
+                if not (fcall.function_node is None) and func != fcall.function_node and fcall.function_node in functions:
+                    calls.add(fcall.function_node)
+            topo_dict[func] = calls
+        
+        try:
+            cnode.topo_order = toposort_flatten(topo_dict, sort=False)
+        except:
+            print('Exception happened')
 
     def generate_partitions(self):
         partitions = []
@@ -271,7 +308,7 @@ class TsCodeFile(CodeFile):
         try:
             cnode.topo_order = toposort_flatten(topo_dict, sort=False)
         except:
-            pass      
+            pass
 
     
     def squash_comments(self, node: Node):
