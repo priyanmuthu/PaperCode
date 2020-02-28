@@ -14,9 +14,15 @@ class CodeFile:
         self.project_path = project_path
         self.source_code = UtilMethods.text_from_file(file_path)
         self.all_lines = self.source_code.splitlines()
+        self.all_lines_process()
         self.syntax_tree = None
         self.language = lang
     
+    def all_lines_process(self):
+        for idx in range(len(self.all_lines)):
+            if self.all_lines[idx] == '':
+                self.all_lines[idx] = ' '
+
     def process(self):
         pass
     
