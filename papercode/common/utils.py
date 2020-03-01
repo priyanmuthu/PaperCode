@@ -133,7 +133,7 @@ class UtilMethods:
 
     @staticmethod
     def get_pre_formated_text(partition, lang: Language = Language.Python):
-        partition_code = '\n'.join(partition['source_code_lines'])
+        partition_code = '\n'.join(partition.source_code_lines)
         partition_html = UtilMethods.highlight(partition_code, lang)
         soup = BeautifulSoup(partition_html, 'html.parser')
         res = soup.find('table')

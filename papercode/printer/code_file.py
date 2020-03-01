@@ -8,6 +8,14 @@ import json
 import tempfile
 import subprocess
 
+class CodePartition:
+    def __init__(self, line_nos: list, source_code_lines: list, format_code_lines: list, length: int, partition_type: type):
+        self.line_nos = line_nos
+        self.source_code_lines = source_code_lines
+        self.format_code_lines = format_code_lines
+        self.length = length
+        self.partition_type = partition_type
+
 class CodeFile:
     def __init__(self, file_path: str, project_path: str = None, lang: Language = Language.Python):
         self.file_path = file_path
@@ -50,25 +58,29 @@ class CodeFile:
         line_nos = [i for i in range(start_line, end_line+1)]
         source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
         format_code_lines = list(map(lambda x: self.preformated_all_lines[x-1], line_nos))
-        return {
-            'line_nos': line_nos, 
-            'source_code_lines': source_code_lines, 
-            'length': len(line_nos), 
-            'partition_type': partition_type,
-            'format_code_lines': format_code_lines
-            }
+        code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, len(line_nos), partition_type)
+        return code_partition
+        # return {
+        #     'line_nos': line_nos, 
+        #     'source_code_lines': source_code_lines, 
+        #     'length': len(line_nos), 
+        #     'partition_type': partition_type,
+        #     'format_code_lines': format_code_lines
+        #     }
     
     def get_hidden_comment_node(self, start_line, end_line, hide_string, partition_type):
         line_nos = [start_line]
         source_code_lines = [hide_string]
         format_code_lines = ['<span class="c1">' + hide_string + '</span>']
-        return {
-            'line_nos': line_nos, 
-            'source_code_lines': source_code_lines, 
-            'length': len(line_nos), 
-            'partition_type': partition_type,
-            'format_code_lines': format_code_lines
-            }
+        code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, len(line_nos), partition_type)
+        return code_partition
+        # return {
+        #     'line_nos': line_nos, 
+        #     'source_code_lines': source_code_lines, 
+        #     'length': len(line_nos), 
+        #     'partition_type': partition_type,
+        #     'format_code_lines': format_code_lines
+        #     }
 
     def get_partition_from_node(self, cst_node):
         if type(cst_node) is Node:
