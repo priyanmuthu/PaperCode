@@ -11,6 +11,14 @@ class PagePartition:
         self.node = node
         self.sidebar = sidebar
 
+class Page:
+    def __init__(self, page_line_nos: list = [], page_lnos: list = [], page_code_lines: list = [], page_sidebar_line_nos: list = [], page_sidebar_code_lines: list = []):
+        self.page_line_nos = page_line_nos
+        self.page_lnos = page_lnos
+        self.page_code_lines = page_code_lines
+        self.page_sidebar_line_nos = page_sidebar_line_nos
+        self.page_sidebar_code_lines = page_sidebar_code_lines
+
 class ConfigurableBaseDiv(BaseDiv):
     def __init__(self, code_file: CodeFile):
         super().__init__(code_file)
@@ -67,29 +75,17 @@ class ConfigurableBaseDiv(BaseDiv):
         # Manual page split
         page_count = 1
         pages = {}
-        page_metadata = {}
-
-        page_lnos = []
-        page_line_nos = []
-        page_code_lines = []
-        page_sidebar_line_nos = []
-        page_sidebar_code_lines = []
+        # page_metadata = {}
+        current_page = Page()
 
         for p in partitions:
             part_length = p.base.length
             block_length = part_length
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 # Start a new page
-                pages[page_count] = {
-                    'line_nos': page_line_nos, 
-                    'source_code_lines': page_code_lines,
-                    'sidebar_line_nos': page_sidebar_line_nos,
-                    'sidebar_code_lines': page_sidebar_code_lines,
-                    'length': len(page_line_nos)
-                    }
+                pages[page_count] = current_page
+                current_page = Page()
                 page_count += 1
-                page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
-                page_lnos = []
                 line_count = 0
             lnos = p.base.line_nos
             line_nos = [str(lno) for lno in p.base.line_nos]
@@ -108,39 +104,27 @@ class ConfigurableBaseDiv(BaseDiv):
 
             for i in range(part_length):
                 if (line_count + 1) > max_lines:
-                    pages[page_count] = {
-                        'line_nos': page_line_nos, 
-                        'source_code_lines': page_code_lines,
-                        'sidebar_line_nos': page_sidebar_line_nos,
-                        'sidebar_code_lines': page_sidebar_code_lines,
-                        'length': len(page_line_nos)
-                        }
+                    pages[page_count] = current_page
+                    current_page = Page()
                     page_count += 1
-                    page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
-                    page_lnos = []
                     line_count = 0
+                
                 line_count += 1
-                page_line_nos.append(line_nos[i])
-                page_code_lines.append(code_lines[i])
+                current_page.page_lnos.append(lnos[i])
+                current_page.page_line_nos.append(line_nos[i])
+                current_page.page_code_lines.append(code_lines[i])
                 if sidebar_line_nos and sidebar_code_lines and i < sidebar_length:
-                    page_sidebar_line_nos.append(sidebar_line_nos[i])
-                    page_sidebar_code_lines.append(sidebar_code_lines[i])
+                    current_page.page_sidebar_line_nos.append(sidebar_line_nos[i])
+                    current_page.page_sidebar_code_lines.append(sidebar_code_lines[i])
                 else:
-                    page_sidebar_line_nos.append('')
-                    page_sidebar_code_lines.append('')
+                    current_page.page_sidebar_line_nos.append(' ')
+                    current_page.page_sidebar_code_lines.append(' ')
 
-        if len(page_line_nos) > 0:
+        if len(current_page.page_line_nos) > 0:
             # There are still some code left
-            pages[page_count] = {
-                'line_nos': page_line_nos, 
-                'source_code_lines': page_code_lines,
-                'sidebar_line_nos': page_sidebar_line_nos,
-                'sidebar_code_lines': page_sidebar_code_lines,
-                'length': len(page_line_nos)
-                }
+            pages[page_count] = current_page
+            current_page = Page()
             page_count += 1
-            page_line_nos, page_code_lines, page_sidebar_line_nos, page_sidebar_code_lines = [], [], [], []
-            page_lnos = []
             line_count = 0
 
         self.add_pages_html(soup, pages)
@@ -150,11 +134,10 @@ class ConfigurableBaseDiv(BaseDiv):
         # Generate a table for each page
         for page in pages:
             highlight_table = self.generate_highlight_table(soup)
-            # page_length = pages[page]['length']
-            page_line_nos = pages[page]['line_nos']
-            page_code_lines = pages[page]['source_code_lines']
-            page_sidebar_line_nos = pages[page]['sidebar_line_nos']
-            page_sidebar_code_lines = pages[page]['sidebar_code_lines']
+            page_line_nos = pages[page].page_line_nos
+            page_code_lines = pages[page].page_code_lines
+            page_sidebar_line_nos = pages[page].page_sidebar_line_nos
+            page_sidebar_code_lines = pages[page].page_sidebar_code_lines
             print(page_line_nos)
             # For each line create a table row
             line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
