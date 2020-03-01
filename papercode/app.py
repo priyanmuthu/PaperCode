@@ -51,10 +51,9 @@ def runts():
     sidebar_div = None
     # sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     code_printer = ConfigurableCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
-    # html_code = code_printer.print_code_file()
-    html_code = code_printer.get_html()
+    html_code = code_printer.print_code_file()
+    # html_code = code_printer.get_html()
     UtilMethods.write_text_to_file(html_path, html_code)
-    # print(html_code)
 
 def runpy():
     # file_path = 'papercode/temp/temp.py'

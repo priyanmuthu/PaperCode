@@ -12,12 +12,12 @@ class PagePartition:
         self.sidebar = sidebar
 
 class Page:
-    def __init__(self, page_line_nos: list = [], page_lnos: list = [], page_code_lines: list = [], page_sidebar_line_nos: list = [], page_sidebar_code_lines: list = []):
-        self.page_line_nos = page_line_nos
-        self.page_lnos = page_lnos
-        self.page_code_lines = page_code_lines
-        self.page_sidebar_line_nos = page_sidebar_line_nos
-        self.page_sidebar_code_lines = page_sidebar_code_lines
+    def __init__(self):
+        self.page_line_nos = []
+        self.page_lnos = []
+        self.page_code_lines = []
+        self.page_sidebar_line_nos = []
+        self.page_sidebar_code_lines = []
 
 class ConfigurableBaseDiv(BaseDiv):
     def __init__(self, code_file: CodeFile):
