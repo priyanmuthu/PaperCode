@@ -60,13 +60,6 @@ class CodeFile:
         format_code_lines = list(map(lambda x: self.preformated_all_lines[x-1], line_nos))
         code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, len(line_nos), partition_type)
         return code_partition
-        # return {
-        #     'line_nos': line_nos, 
-        #     'source_code_lines': source_code_lines, 
-        #     'length': len(line_nos), 
-        #     'partition_type': partition_type,
-        #     'format_code_lines': format_code_lines
-        #     }
     
     def get_hidden_comment_node(self, start_line, end_line, hide_string, partition_type):
         line_nos = [start_line]
@@ -74,13 +67,6 @@ class CodeFile:
         format_code_lines = ['<span class="c1">' + hide_string + '</span>']
         code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, len(line_nos), partition_type)
         return code_partition
-        # return {
-        #     'line_nos': line_nos, 
-        #     'source_code_lines': source_code_lines, 
-        #     'length': len(line_nos), 
-        #     'partition_type': partition_type,
-        #     'format_code_lines': format_code_lines
-        #     }
 
     def get_partition_from_node(self, cst_node):
         if type(cst_node) is Node:
