@@ -37,6 +37,8 @@ class ConfigurableBaseDiv(BaseDiv):
         self.node_parition_dict = {}
         self.function_nodes = []
         self.node_page_dict = {}
+        self.pages = {}
+        self.line_page_dict = {}
 
 
 
@@ -74,7 +76,6 @@ class ConfigurableBaseDiv(BaseDiv):
         
         # Manual page split
         page_count = 1
-        pages = {}
         # page_metadata = {}
         current_page = Page()
 
@@ -83,7 +84,7 @@ class ConfigurableBaseDiv(BaseDiv):
             block_length = part_length
             if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 # Start a new page
-                pages[page_count] = current_page
+                self.pages[page_count] = current_page
                 current_page = Page()
                 page_count += 1
                 line_count = 0
@@ -104,12 +105,13 @@ class ConfigurableBaseDiv(BaseDiv):
 
             for i in range(part_length):
                 if (line_count + 1) > max_lines:
-                    pages[page_count] = current_page
+                    self.pages[page_count] = current_page
                     current_page = Page()
                     page_count += 1
                     line_count = 0
                 
                 line_count += 1
+                self.line_page_dict[lnos[i]] = page_count
                 current_page.page_lnos.append(lnos[i])
                 current_page.page_line_nos.append(line_nos[i])
                 current_page.page_code_lines.append(code_lines[i])
@@ -122,23 +124,22 @@ class ConfigurableBaseDiv(BaseDiv):
 
         if len(current_page.page_line_nos) > 0:
             # There are still some code left
-            pages[page_count] = current_page
+            self.pages[page_count] = current_page
             current_page = Page()
             page_count += 1
             line_count = 0
 
-        self.add_pages_html(soup, pages)
+        self.add_pages_html(soup)
 
         
-    def add_pages_html(self, soup: BeautifulSoup, pages: dict):
+    def add_pages_html(self, soup: BeautifulSoup):
         # Generate a table for each page
-        for page in pages:
+        for page in self.pages:
             highlight_table = self.generate_highlight_table(soup)
-            page_line_nos = pages[page].page_line_nos
-            page_code_lines = pages[page].page_code_lines
-            page_sidebar_line_nos = pages[page].page_sidebar_line_nos
-            page_sidebar_code_lines = pages[page].page_sidebar_code_lines
-            print(page_line_nos)
+            page_line_nos = self.pages[page].page_line_nos
+            page_code_lines = self.pages[page].page_code_lines
+            page_sidebar_line_nos = self.pages[page].page_sidebar_line_nos
+            page_sidebar_code_lines = self.pages[page].page_sidebar_code_lines
             # For each line create a table row
             line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
             code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
