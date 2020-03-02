@@ -9,6 +9,9 @@ class Node(object):
     
     def print(self):
         print('Node: Child Count: ', len(self.children))
+    
+    def __lt__(self, other):
+        return self.start_pos.line < other.start_pos.line
 
 
 class InterfaceNode(Node):

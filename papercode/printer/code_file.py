@@ -26,6 +26,7 @@ class CodeFile:
         self.syntax_tree = None
         self.language = lang
         self.preformated_all_lines = UtilMethods.get_preformated_innerhtml('\n'.join(self.all_lines), self.language)
+        self.is_sort_topo_sort = True
     
     def all_lines_process(self):
         for idx in range(len(self.all_lines)):
@@ -148,9 +149,9 @@ class PyCodeFile(CodeFile):
             topo_dict[func] = calls
         
         try:
-            cnode.topo_order = toposort_flatten(topo_dict, sort=False)
+            cnode.topo_order = toposort_flatten(topo_dict, sort=self.is_sort_topo_sort)
         except:
-            print('Exception happened')
+            print('Toposort Failed')
 
     def generate_partitions(self):
         partitions = []
@@ -304,9 +305,9 @@ class TsCodeFile(CodeFile):
             topo_dict[func] = calls
         
         try:
-            cnode.topo_order = toposort_flatten(topo_dict, sort=False)
-        except:
-            pass
+            cnode.topo_order = toposort_flatten(topo_dict, sort=self.is_sort_topo_sort)
+        except Exception as e:
+            print('Toposort Failed', e)
 
     
     def squash_comments(self, node: Node):

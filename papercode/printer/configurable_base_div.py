@@ -3,6 +3,7 @@ from papercode.common.utils import UtilMethods, Paper
 from papercode.language.node import Node, ClassNode, FunctionNode, CallNode, InterfaceNode, CommentNode
 from papercode.printer.code_file import CodeFile, CodePartition
 from bs4 import BeautifulSoup
+from collections import defaultdict
 import uuid
 
 class PagePartition:
@@ -19,6 +20,12 @@ class Page:
         self.page_sidebar_line_nos = []
         self.page_sidebar_code_lines = []
 
+class AuxPartition:
+    def __init__(self, partition: CodePartition, line: int, page: int):
+        self.partition = partition
+        self.line = line
+        self.page = page
+
 class ConfigurableBaseDiv(BaseDiv):
     def __init__(self, code_file: CodeFile):
         super().__init__(code_file)
@@ -33,12 +40,16 @@ class ConfigurableBaseDiv(BaseDiv):
         self.RemoveEmptyLines = True
         self.BoldFunctionStartLine = True
 
+        # Auxiliary page with info
+        self.LargeCommentsInAuxiliary = True
+
         # Inner Working
         self.node_parition_dict = {}
         self.function_nodes = []
         self.node_page_dict = {}
         self.pages = {}
         self.line_page_dict = {}
+        self.auxiliary_partition_dict = {}
 
 
 
@@ -61,11 +72,11 @@ class ConfigurableBaseDiv(BaseDiv):
         partitions = self.getPartitions(root_node)
         
         # Post process
+        # Squashing comments to sidebar
+        partitions = self.squash_partitions(partitions)
         # Removing empty lines
         if self.RemoveEmptyLines:
             partitions = self.remove_empty_partitions(partitions)
-        # Squashing comments to sidebar
-        partitions = self.squash_partitions(partitions)
         # Table-of-contents
         self.pre_calculcate_pages(partitions, paper) # Pre-calculating pages
         partitions = self.table_of_contents(partitions)
@@ -129,17 +140,16 @@ class ConfigurableBaseDiv(BaseDiv):
             page_count += 1
             line_count = 0
 
-        self.add_pages_html(soup)
-
+        self.add_pages_html(soup, self.pages)
         
-    def add_pages_html(self, soup: BeautifulSoup):
+    def add_pages_html(self, soup: BeautifulSoup, pages: dict):
         # Generate a table for each page
-        for page in self.pages:
+        for page in pages:
             highlight_table = self.generate_highlight_table(soup)
-            page_line_nos = self.pages[page].page_line_nos
-            page_code_lines = self.pages[page].page_code_lines
-            page_sidebar_line_nos = self.pages[page].page_sidebar_line_nos
-            page_sidebar_code_lines = self.pages[page].page_sidebar_code_lines
+            page_line_nos = pages[page].page_line_nos
+            page_code_lines = pages[page].page_code_lines
+            page_sidebar_line_nos = pages[page].page_sidebar_line_nos
+            page_sidebar_code_lines = pages[page].page_sidebar_code_lines
             # For each line create a table row
             line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
             code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
@@ -209,6 +219,62 @@ class ConfigurableBaseDiv(BaseDiv):
         side_table.append(table_row)
         return side_table
 
+    def get_auxiliary_pages(self, soup: BeautifulSoup):
+        # Generate auxiliary pages using info from the existing pages.
+        aux_page_count = 1
+        aux_pages = {}
+        # For each auxiliary partition, Check if the line is in the base page
+        for aux_line in self.auxiliary_partition_dict:
+            if aux_line not in self.line_page_dict:
+                # Do something here
+                pass
+
+        # Get aux parition by page
+        page_aux_dict = defaultdict(list)
+        for aux_line in self.auxiliary_partition_dict:
+            print(aux_line, self.line_page_dict[aux_line])
+            aux_part = AuxPartition(self.auxiliary_partition_dict[aux_line], aux_line, self.line_page_dict[aux_line])
+            page_aux_dict[self.line_page_dict[aux_line]].append(aux_part)
+
+        # Go page by page, and generate aux pages
+        for page in self.pages:
+            # New table for each page
+            if page not in page_aux_dict:
+                # Leave the page empty
+                # highlight_table = self.generate_highlight_table(soup)
+                continue
+            else:
+                # Generate the aux page
+                aux_parts = page_aux_dict[page]
+                cur_base_page = self.pages[page]
+                cur_aux_page = Page()
+                # Nothing in the sidebar
+                cur_aux_page.page_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
+                cur_aux_page.page_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
+                cur_aux_page.page_sidebar_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
+                cur_aux_page.page_sidebar_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
+                used_lines = set()
+                print(page)
+                # For each partition - add to page if possible
+                for aPart in aux_parts:
+                    idx = cur_base_page.page_lnos.index(aPart.line)
+                    selected_lnos = cur_base_page.page_lnos[idx: (idx + aPart.partition.length)]
+                    # If the lengths match, and there aren't any conflicts then directly add
+                    if len(selected_lnos) == aPart.partition.length and used_lines.isdisjoint(set(selected_lnos)):
+                        used_lines = used_lines.union(selected_lnos)
+                        cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
+                        cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
+                    print(aPart.partition.length, len(selected_lnos), selected_lnos)
+                pass
+                print(used_lines)
+                print(cur_aux_page.page_line_nos)
+                print(cur_aux_page.page_code_lines)
+                print('------------------------------------------------')
+                aux_pages[aux_page_count] = cur_aux_page
+                aux_page_count += 1
+
+        self.add_pages_html(soup, aux_pages)
+    
     def pre_calculcate_pages(self, partitions: list, paper: Paper):
         # Create partition node dict
         page_count = 1
@@ -335,7 +401,6 @@ class ConfigurableBaseDiv(BaseDiv):
                 # Adding intermediate lines
                 if current_line < child.start_pos.line - 1:
                     # Add a new partition
-                    # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
                     part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, Node)
                     partitions.append(PagePartition(part, node))
                 
@@ -343,7 +408,6 @@ class ConfigurableBaseDiv(BaseDiv):
                 partitions.extend(self.getPartitions(child))
                 current_line = child.end_pos.line
             if current_line < end_line:
-                # print('partition (', current_line + 1, ',', end_line, ')')
                 part = self.code_file.get_partition(current_line + 1 , end_line, Node)
                 partitions.append(PagePartition(part, node))
                 current_line = end_line
@@ -356,7 +420,6 @@ class ConfigurableBaseDiv(BaseDiv):
                 # Adding intermediate lines
                 if current_line < child.start_pos.line - 1:
                     # Add a new partition
-                    # print('partition (', current_line + 1, ',', child.start_pos.line - 1, '):', child.start_pos.line)
                     part = self.code_file.get_partition(current_line + 1, child.start_pos.line - 1, ClassNode)
                     partitions.append(PagePartition(part, node))
                 
@@ -373,13 +436,11 @@ class ConfigurableBaseDiv(BaseDiv):
                     partitions.extend(self.getPartitions(fc))
             
             if current_line < end_line:
-                # print('partition (', current_line + 1, ',', end_line, ')')
                 part = self.code_file.get_partition(current_line + 1 , end_line, ClassNode)
                 partitions.append(PagePartition(part, node))
                 current_line = end_line
             
         elif type(node) == InterfaceNode:
-            # print('func partition (', node.start_pos.line, ',', node.end_pos.line, ')')
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, InterfaceNode)
             partitions.append(PagePartition(part, node))
         elif type(node) == FunctionNode:
@@ -387,7 +448,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 function_partition = self.getFunctionPartition(node)
             else:
                 part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, FunctionNode)
-                function_partition = {PagePartition(part, node)}
+                function_partition = PagePartition(part, node)
             partitions.append(function_partition)
             self.node_parition_dict[node] = function_partition
             self.function_nodes.append(node)
@@ -464,6 +525,9 @@ class ConfigurableBaseDiv(BaseDiv):
     def getCommentPartition(self, node: CommentNode):
         if self.hideBigComments and node.size > self.BigCommentLimit:
             part = self.code_file.get_hidden_comment_node(node.start_pos.line, node.end_pos.line, ' // ** LARGE COMMENT HIDDEN **', CommentNode)
+            # Auxiliary page info
+            next_line = node.end_pos.line + 1
+            self.auxiliary_partition_dict[next_line] = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
             return PagePartition(part, node)
         elif self.pushSmallComments and node.size <= self.smallCommentLimit:
             part = self.code_file.get_partition(node.start_pos.line, node.end_pos.line, CommentNode)
@@ -476,6 +540,9 @@ class ConfigurableBaseDiv(BaseDiv):
         res_partition = []
         for part in partitions:
             if part.base is None:
+                res_partition.append(part)
+                continue
+            if not (part.sidebar is None):
                 res_partition.append(part)
                 continue
             base_part = part.base
@@ -491,7 +558,11 @@ class ConfigurableBaseDiv(BaseDiv):
         for part in partitions:
             if not(part.base is None):
                 if not(cur_sidebar is None):
-                    if cur_sidebar.sidebar.length > part.base.length or not(part.sidebar is None):
+                    if cur_sidebar.sidebar.length == 1 and part.base.length == 1 and part.base.source_code_lines[0].strip() == '':
+                        part.base = cur_sidebar.sidebar
+                        part.node = cur_sidebar.node
+                        cur_sidebar = None
+                    elif cur_sidebar.sidebar.length > part.base.length or not(part.sidebar is None):
                         # Todo: Can do better - if there is side bar, but we have initial space
                         res_partition.append(PagePartition(cur_sidebar.sidebar, cur_sidebar.node))
                         cur_sidebar = None
