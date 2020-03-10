@@ -34,9 +34,21 @@ def file_compare_test():
     f2_lines = f2.readlines()
     f2.close()
 
-    diff = difflib.ndiff(f1_lines, f2_lines)
+    diff = difflib.ndiff(f2_lines, f1_lines)
+    line_number_1 = 0
+    line_number_2 = 0
     for line in diff:
-        print(line)
+        code = line[:2]
+        if code == '  ':
+            line_number_1 += 1
+            line_number_2 += 1
+            print(line_number_1, line_number_2, line)
+        elif code == '+ ':
+            line_number_2 += 1
+            print(line_number_2, line)
+        elif code == '- ':
+            line_number_1 += 1
+            print(line_number_1, line)
 
 def runts():
     file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')

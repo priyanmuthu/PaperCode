@@ -84,6 +84,29 @@ function multiplyLists(a, b) {
   return ret;
 }
 
+
+// BEGIN utilities for selectively hiding variables
+
+// use htmlspecialchars to escape contents before printing to HTML,
+// then UNDO &nbsp; -> ' ' since we want spaces to nicely line-wrap
+// instead of being non-breaking
+function varlistToHtml(lst) {
+  return htmlspecialchars(lst.join(", ")).replace(/&nbsp;/g, ' ');
+}
+
+// take a string of something to hide, replace newlines with ','
+// so users can conveniently use newlines as delimiters, then split
+// by ',', filter out empty entries, and return trimmed ones:
+function processHideString(s) {
+  return s.replace(/\n/g, ',')
+           .split(',')
+           .filter(e=>e.trim().length > 0)
+           .map(e=>e.trim());
+}
+
+// END utilities for selectively hiding variables
+
+
 var newlineAllRegex = new RegExp('\n', 'g');
 var doubleQuoteAllRegex = new RegExp('\"', 'g');
 var tabAllRegex = new RegExp("\t", 'g');
@@ -1166,12 +1189,23 @@ class DataVisualizer {
   // but this is an acceptable level of jank for now)
   draggedHeapObjectCSS: any;
 
-  curTraceLayouts: any[];
+  curTraceLayouts: any[]; // initialized in precomputeCurTraceLayouts
 
   jsPlumbInstance: any;
   jsPlumbManager: any;
 
-  classAttrsHidden: any = {}; // kludgy hack for 'show/hide attributes' for class objects
+  // for selectively hiding variables and fields: d3.map used as a set,
+  // with variable/field name as keys (and true as values)
+  hideVarsSet: any;
+  hideFieldsSet: any;
+
+  // temporary -- what has been hidden during a particular call to
+  // renderDataStructures? (reset during every call to renderDataStructures)
+  varsHidden: string[];
+  fieldsHidden: string[];
+
+  static GLOBAL_PREFIX = 'global';
+  static UNNAMED_PREFIX = '<unnamed>';
 
   constructor(owner, domRoot, domRootD3) {
     this.owner = owner;
@@ -1181,9 +1215,13 @@ class DataVisualizer {
     this.domRoot = domRoot;
     this.domRootD3 = domRootD3;
 
+    this.hideVarsSet = null;
+    this.hideFieldsSet = null;
+
     this.draggedHeapObjectCSS = d3.map(); // see above for description
 
     var codeVizHTML = `
+      <div id="selectiveHideStatus"></div>
       <div id="dataViz">
          <table id="stackHeapTable">
            <tr>
@@ -1341,6 +1379,148 @@ class DataVisualizer {
     };
   }
 
+
+  // gets all global and local variable names used in this program
+  // execution as indicated by this.curTrace
+  getAllProgramVarnames() {
+    let me = this;
+    let allVarnames = [];
+    $.each(this.curTrace, function(i, curEntry) {
+      $.each(curEntry.ordered_globals, function(i, varname) {
+        let encodedVarname = DataVisualizer.GLOBAL_PREFIX + ':' + varname;
+        if (allVarnames.indexOf(encodedVarname) < 0) { // don't insert duplicates
+          allVarnames.push(encodedVarname);
+        }
+      });
+
+      $.each(curEntry.stack_to_render, function(i, frame) {
+        // some functions are unnamed, so use a placeholder:
+        let func_prefix = frame.func_name ? frame.func_name : DataVisualizer.UNNAMED_PREFIX;
+        $.each(frame.ordered_varnames, function(xxx, varname) {
+          let encodedVarname = func_prefix + ':' + varname;
+          if (allVarnames.indexOf(encodedVarname) < 0) { // don't insert duplicates
+            allVarnames.push(encodedVarname);
+          }
+        });
+      });
+    });
+
+    return allVarnames;
+  }
+
+  // gets all field names of classes, objects, dicts, C structs, and anything
+  // else that has attribute/field names, as indicated by this.curTrace
+  getAllProgramObjectFieldNames() {
+    let me = this;
+    let allFieldnames = [];
+
+    // copied from recurseIntoCStructArray ...
+    // see inside comments for an optimization opportunity:
+    function traverseCStructArray(val) {
+      if (val[0] == 'C_STRUCT') {
+        // grab all field names and add to allFieldnames
+        let structName = val[2] ? val[2] : DataVisualizer.UNNAMED_PREFIX;
+
+        $.each(val, function(ind, kvPair) {
+          if (ind < 3) return; // these have 3 header fields
+          let fieldName = kvPair[0];
+          let encodedFieldname = structName + ':' + fieldName;
+          if (allFieldnames.indexOf(encodedFieldname) < 0) { // don't insert duplicates
+            allFieldnames.push(encodedFieldname);
+          }
+        });
+      }
+
+      // recurse inside if necessary ...
+      //
+      // TODO: if you really want to make this more efficient
+      // (especially for huge arrays), you can simply traverse into the
+      // *first element* of C_ARRAY or C_MULTIDIMENSIONAL_ARRAY since
+      // they're supposedly homogeneous, so the type of the first element
+      // should be identical to the type of all other elements :)
+      // (just beware of the case of empty (zero-sized) arrays, though)
+      if (val[0] === 'C_ARRAY') {
+        $.each(val, function(ind, elt) {
+          if (ind < 2) return; // these have 2 header fields
+          traverseCStructArray(elt);
+        });
+      } else if (val[0] === 'C_MULTIDIMENSIONAL_ARRAY' || val[0] === 'C_STRUCT') {
+        $.each(val, function(ind, kvPair) {
+          if (ind < 3) return; // these have 3 header fields
+          traverseCStructArray(kvPair[1]);
+        });
+      }
+    }
+
+    $.each(this.curTrace, function(i, curEntry) {
+      //console.log(i, curEntry);
+
+      // iterate through the heap looking for relevant objects with fields
+      // expected format from ../pg_encoder.py
+      // #   * instance - ['INSTANCE', class name, [attr1, value1], [attr2, value2], ..., [attrN, valueN]]
+      // #   * instance with non-trivial __str__ defined - ['INSTANCE_PPRINT', class name, <__str__ value>, [attr1, value1], [attr2, value2], ..., [attrN, valueN]]
+      // #   * class    - ['CLASS', class name, [list of superclass names], [attr1, value1], [attr2, value2], ..., [attrN, valueN]]
+      //
+      // also for javascript, JS_FUNCTION objects may have funcProperties
+      //
+      // [NB: we don't count DICT here since those don't technically contain
+      // 'fields'; they contain dict keys, which don't necessarily need to be
+      // strings, so it's confusing to try to ignore a non-string dict key]
+      $.each(curEntry.heap, function(k, obj) {
+        let typ = obj[0];
+        if (typ == 'INSTANCE' || typ == 'INSTANCE_PPRINT' || typ == 'CLASS') {
+          let [className, headerLength] = DataVisualizer.getClassInstanceMetadata(obj);
+          for (let i = headerLength; i < obj.length; i++) {
+            let fieldName = obj[i][0];
+            // className can possibly be null ...
+            let encodedFieldname = className ? className + ':' + fieldName : fieldName;
+            if (allFieldnames.indexOf(encodedFieldname) < 0) { // don't insert duplicates
+              allFieldnames.push(encodedFieldname);
+            }
+          }
+        } else if (typ == 'JS_FUNCTION') {
+          let funcProperties = obj[3];
+          if (funcProperties) {
+            let funcName = obj[1];
+            // special-case handling: prefix with function name if appropriate
+            for (let i = 0; i < funcProperties.length; i++) {
+              let fieldName = funcProperties[i][0];
+              // funcName can possibly be empty ...
+              let encodedFieldname = funcName ? funcName + ':' + fieldName : fieldName;
+              if (allFieldnames.indexOf(encodedFieldname) < 0) { // don't insert duplicates
+                allFieldnames.push(encodedFieldname);
+              }
+            }
+          }
+        } else if (typ == 'C_ARRAY' || typ == 'C_MULTIDIMENSIONAL_ARRAY' || typ == 'C_STRUCT') {
+          traverseCStructArray(obj);
+        }
+      });
+
+
+      // C and C++ objects can exist directly within the global frame or
+      // stack frames (not just on the heap), so we need to traverse
+      // through those as well
+      if (me.isCppMode()) {
+        $.each(curEntry.ordered_globals, function(i, varname) {
+          let val = curEntry.globals[varname];
+          traverseCStructArray(val);
+        });
+
+        // iterate thru all stack frames
+        $.each(curEntry.stack_to_render, function(i, frame) {
+          $.each(frame.ordered_varnames, function(xxx, varname) {
+            let val = frame.encoded_locals[varname];
+            traverseCStructArray(val);
+          });
+        });
+      }
+    });
+
+    return allFieldnames;
+  }
+
+
   // this method initializes curTraceLayouts
   //
   // Pre-compute the layout of top-level heap objects for ALL execution
@@ -1349,7 +1529,11 @@ class DataVisualizer {
   // heap objects don't "jiggle around" (i.e., preserving positional
   // invariance). Also, if we set up the layout objects properly, then we
   // can take full advantage of d3 to perform rendering and transitions.
+  //
+  // (also call this function whenever the user chooses to selectively
+  //  hide/show variables/objects, since we want to get the latest layout)
   precomputeCurTraceLayouts() {
+    //console.log('precomputeCurTraceLayouts');
     // curTraceLayouts is a list of top-level heap layout "objects" with the
     // same length as curTrace after it's been fully initialized. Each
     // element of curTraceLayouts is computed from the contents of its
@@ -1471,11 +1655,15 @@ class DataVisualizer {
           });
         }
         else if (heapObj[0] == 'INSTANCE' || heapObj[0] == 'INSTANCE_PPRINT' || heapObj[0] == 'CLASS') {
+          let [className, headerLength] = DataVisualizer.getClassInstanceMetadata(heapObj);
           jQuery.each(heapObj, function(ind, child) {
-            var headerLength = (heapObj[0] == 'INSTANCE') ? 2 : 3;
             if (ind < headerLength) return;
 
             var instKey = child[0];
+            if (myViz.inHideFieldsSet(className, instKey)) {
+              //console.log('precompute HIDING', className, instKey);
+              return; // get out!
+            }
             if (!myViz.isPrimitiveType(instKey)) {
               var keyChildID = getRefID(instKey);
               if (!myViz.owner.shouldNestObject(curEntry.heap[keyChildID])) {
@@ -1514,7 +1702,19 @@ class DataVisualizer {
 
           if (funcProperties) {
             assert(funcProperties.length > 0);
+            let funcName = heapObj[1];
             $.each(funcProperties, function(ind, kvPair) {
+              // only check this for JS_FUNCTION! we're overloading
+              // funcProperties to use for both FUNCTION and
+              // JS_FUNCTION, which might be confusing ...
+              if (heapObj[0] == 'JS_FUNCTION') {
+                let instKey = kvPair[0];
+                if (myViz.inHideFieldsSet(funcName, instKey)) {
+                  //console.log('precompute HIDING', funcName, instKey);
+                  return; // get out!
+                }
+              }
+
               // copy/paste from INSTANCE/CLASS code above
               var instVal = kvPair[1];
               if (!myViz.isPrimitiveType(instVal)) {
@@ -1654,6 +1854,16 @@ class DataVisualizer {
         } else if (val[0] === 'C_MULTIDIMENSIONAL_ARRAY' || val[0] === 'C_STRUCT') {
           $.each(val, function(ind, kvPair) {
             if (ind < 3) return; // these have 3 header fields
+
+            if (val[0] === 'C_STRUCT') {
+              let structName = val[2] ? val[2] : DataVisualizer.UNNAMED_PREFIX;
+              let fieldName = kvPair[0];
+              if (myViz.inHideFieldsSet(structName, fieldName)) {
+                //console.log('precompute HIDING', structName, fieldName);
+                return; // get out!
+              }
+            }
+
             updateCurLayoutAndRecurse(kvPair[1]);
           });
         }
@@ -1661,6 +1871,11 @@ class DataVisualizer {
 
       // iterate through all globals and ordered stack frames and call updateCurLayout
       $.each(curEntry.ordered_globals, function(i, varname) {
+        if (myViz.inHideVarsSet(DataVisualizer.GLOBAL_PREFIX, varname)) {
+          //console.log('precompute HIDING', DataVisualizer.GLOBAL_PREFIX, varname);
+          return; // get out!
+        }
+
         var val = curEntry.globals[varname];
         if (val !== undefined) { // might not be defined at this line, which is OKAY!
           // TODO: try to unify this behavior between C/C++ and other languages:
@@ -1676,7 +1891,15 @@ class DataVisualizer {
       });
 
       $.each(curEntry.stack_to_render, function(i, frame) {
+        // some functions are unnamed, so use a placeholder:
+        let func_prefix = frame.func_name ? frame.func_name : DataVisualizer.UNNAMED_PREFIX;
+
         $.each(frame.ordered_varnames, function(xxx, varname) {
+          if (myViz.inHideVarsSet(func_prefix, varname)) {
+            //console.log('precompute HIDING', func_prefix, varname);
+            return; // get out!
+          }
+
           var val = frame.encoded_locals[varname];
           // TODO: try to unify this behavior between C/C++ and other languages:
           if (myViz.isCppMode()) {
@@ -1824,6 +2047,7 @@ class DataVisualizer {
   // of data structure aliasing. That is, aliased objects were rendered
   // multiple times, and a unique ID label was used to identify aliases.
   renderDataStructures(curInstr: number) {
+    //console.log('renderDataStructures', curInstr);
     var myViz = this; // to prevent confusion of 'this' inside of nested functions
 
     var curEntry = this.curTrace[curInstr];
@@ -1855,6 +2079,13 @@ class DataVisualizer {
     myViz.jsPlumbInstance.select({scope: 'frameParentPointer'}).each(function(c) {
       existingParentPointerConnectionEndpointIDs.set(c.sourceId, c.targetId);
     });
+
+
+    // what variables/fields were hidden in this call to renderDataStructures?
+    // (make these fields and not locals so that we can access them in
+    // other methods too, ergh)
+    myViz.varsHidden = [];
+    myViz.fieldsHidden = [];
 
 
     // Heap object rendering phase:
@@ -2011,6 +2242,12 @@ class DataVisualizer {
     // so filter those out.)
     var realGlobalsLst = [];
     $.each(curEntry.ordered_globals, function(i, varname) {
+      if (myViz.inHideVarsSet(DataVisualizer.GLOBAL_PREFIX, varname)) {
+        console.log('render HIDING', DataVisualizer.GLOBAL_PREFIX, varname);
+        myViz.varsHidden.push(DataVisualizer.GLOBAL_PREFIX + ':' + varname);
+        return; // get out!
+      }
+
       var val = curEntry.globals[varname];
 
       // (use '!==' to do an EXACT match against undefined)
@@ -2244,11 +2481,25 @@ class DataVisualizer {
       .order() // VERY IMPORTANT to put in the order corresponding to data elements
       .select('table').selectAll('tr')
       .data(function(frame) {
-          // each list element contains a reference to the entire frame
-          // object as well as the variable name
-          // TODO: look into whether we can use d3 parent nodes to avoid
-          // this hack ... http://bost.ocks.org/mike/nest/
-          return frame.ordered_varnames.map(function(varname) {return {varname:varname, frame:frame};});
+          if (myViz.hideVarsSet) {
+            // filter out everything in hideVarsSet
+            let func_prefix = frame.func_name ? frame.func_name : DataVisualizer.UNNAMED_PREFIX;
+
+            // a bit inefficient since we call filter twice, but whateves :)
+            let hiddenVarnamesLst = frame.ordered_varnames.filter(varname => myViz.inHideVarsSet(func_prefix, varname));
+            console.log('render HIDING', func_prefix, hiddenVarnamesLst);
+            hiddenVarnamesLst.forEach(e => {myViz.varsHidden.push(func_prefix + ':' + e);});
+
+            return frame.ordered_varnames
+                     .filter(varname => !myViz.inHideVarsSet(func_prefix, varname))
+                     .map(varname => {return {varname:varname, frame:frame};});
+          } else {
+            // each list element contains a reference to the entire frame
+            // object as well as the variable name
+            // TODO: look into whether we can use d3 parent nodes to avoid
+            // this hack ... http://bost.ocks.org/mike/nest/
+            return frame.ordered_varnames.map(function(varname) {return {varname:varname, frame:frame};});
+          }
         },
         function(d) {
           // TODO: why would d ever be null?!? weird
@@ -2711,6 +2962,40 @@ class DataVisualizer {
       }
     });
 
+
+    // show which variables/fields were actually hidden during this call
+    // to renderDataStructures:
+    if (myViz.owner.navControls.customizeVizOptionsShown) {
+      needToRedrawConnectors = true; // always redraw! TODO: will this get inefficient?!?
+
+      let shs = this.domRoot.find('#selectiveHideStatus');
+      shs.empty(); // ALWAYS start from scratch each time!
+
+      if (myViz.varsHidden.length > 0 || myViz.fieldsHidden.length > 0) {
+        // printing hidden vars/fields may move elements in the heap visualization
+        if (myViz.varsHidden.length > 0) {
+          // filter out duplicates:
+          let varsHiddenNoDups = [];
+          myViz.varsHidden.forEach(e => {
+            if (varsHiddenNoDups.indexOf(e) < 0) {
+              varsHiddenNoDups.push(e);
+            }
+          });
+          shs.append("Hidden variables: " + varlistToHtml(varsHiddenNoDups));
+        }
+        if (myViz.fieldsHidden.length > 0) {
+          // filter out duplicates:
+          let fieldsHiddenNoDups = [];
+          myViz.fieldsHidden.forEach(e => {
+            if (fieldsHiddenNoDups.indexOf(e) < 0) {
+              fieldsHiddenNoDups.push(e);
+            }
+          });
+          shs.append("<br/>Hidden object fields: " + varlistToHtml(fieldsHiddenNoDups));
+        }
+      }
+    }
+
     if (needToRedrawConnectors) {
       myViz.redrawConnectors();
     }
@@ -3038,7 +3323,7 @@ class DataVisualizer {
     else if (obj[0] == 'INSTANCE' || obj[0] == 'INSTANCE_PPRINT' || obj[0] == 'CLASS') {
       var isInstance = (obj[0] == 'INSTANCE');
       var isPprintInstance = (obj[0] == 'INSTANCE_PPRINT');
-      var headerLength = isInstance ? 2 : 3;
+      let [className, headerLength] = DataVisualizer.getClassInstanceMetadata(obj);
 
       assert(obj.length >= headerLength);
 
@@ -3052,15 +3337,8 @@ class DataVisualizer {
         if (obj[2].length > 0) {
           superclassStr += ('[extends ' + obj[2].join(', ') + '] ');
         }
-        d3DomElement.append('<div class="typeLabel">' + typeLabelPrefix + obj[1] + ' class ' + superclassStr +
-                            '<br/>' + '<a href="javascript:void(0)" id="attrToggleLink">hide attributes</a>' + '</div>');
+        d3DomElement.append('<div class="typeLabel">' + typeLabelPrefix + obj[1] + ' class ' + superclassStr + '</div>');
       }
-
-      // right now, let's NOT display class members, since that clutters
-      // up the display too much. in the future, consider displaying
-      // class members in a pop-up pane on mouseover or mouseclick
-      // actually nix what i just said above ...
-      //if (!isInstance) return;
 
       if (obj.length > headerLength) {
         var lab = isInstance ? 'inst' : 'class';
@@ -3070,6 +3348,12 @@ class DataVisualizer {
 
         $.each(obj, function(ind, kvPair) {
           if (ind < headerLength) return; // skip header tags
+
+          if (myViz.inHideFieldsSet(className, kvPair[0])) {
+            console.log('render HIDING', className, kvPair[0]);
+            myViz.fieldsHidden.push((className ? className + ':' : '') + kvPair[0]);
+            return; // get out!
+          }
 
           tbl.append('<tr class="' + lab + 'Entry"><td class="' + lab + 'Key"></td><td class="' + lab + 'Val"></td></tr>');
 
@@ -3092,44 +3376,6 @@ class DataVisualizer {
           // values can be arbitrary objects, so recurse:
           myViz.renderNestedObject(kvPair[1], stepNum, valTd);
         });
-      }
-
-      // class attributes can be displayed or hidden, so as not to
-      // CLUTTER UP the display with a ton of attributes, especially
-      // from imported modules and custom types created from, say,
-      // collections.namedtuple
-      //
-      // TODO: make this a more general mechanism by which anything can
-      // be toggled hidden! one idea is to use a hidden data- field in
-      // each .heapObject to store its attribute toggle status, so that
-      // we can restore it when we re-render this object at other
-      // execution steps
-      if (!isInstance) {
-        var className = obj[1];
-        d3DomElement.find('.typeLabel #attrToggleLink').click(function() {
-          var elt = d3DomElement.find('.classTbl');
-          elt.toggle();
-          $(this).html((elt.is(':visible') ? 'hide' : 'show') + ' attributes');
-
-          if (elt.is(':visible')) {
-            myViz.classAttrsHidden[className] = false;
-            $(this).html('hide attributes');
-          }
-          else {
-            myViz.classAttrsHidden[className] = true;
-            $(this).html('show attributes');
-          }
-
-          myViz.redrawConnectors(); // redraw all arrows!
-          return false; // don't reload the page
-        });
-
-        // "remember" whether this was hidden earlier during this
-        // visualization session
-        if (myViz.classAttrsHidden[className]) {
-          d3DomElement.find('.classTbl').hide();
-          d3DomElement.find('.typeLabel #attrToggleLink').html('show attributes');
-        }
       }
     }
     else if (obj[0] == 'FUNCTION') {
@@ -3188,7 +3434,15 @@ class DataVisualizer {
 
         if (funcProperties) {
           assert(funcProperties.length > 0);
+          let rawFuncName = obj[1];
           $.each(funcProperties, function(ind, kvPair) {
+              let instKey = kvPair[0];
+              if (myViz.inHideFieldsSet(rawFuncName, kvPair[0])) {
+                console.log('render HIDING', rawFuncName, kvPair[0]);
+                myViz.fieldsHidden.push((rawFuncName ? rawFuncName + ':' : '') + kvPair[0]);
+                return; // get out!
+              }
+
               tbl.append('<tr class="classEntry"><td class="classKey"></td><td class="classVal"></td></tr>');
               var newRow = tbl.find('tr:last');
               var keyTd = newRow.find('td:first');
@@ -3260,8 +3514,16 @@ class DataVisualizer {
 
         var tbl = d3DomElement.children('table');
 
+        let structName = obj[2] ? obj[2] : DataVisualizer.UNNAMED_PREFIX;
         $.each(obj, function(ind, kvPair) {
           if (ind < 3) return; // skip header tags
+
+          let fieldName = kvPair[0];
+          if (myViz.inHideFieldsSet(structName, fieldName)) {
+            console.log('render HIDING', structName, fieldName);
+            myViz.fieldsHidden.push(structName + ':' + fieldName);
+            return; // get out!
+          }
 
           tbl.append('<tr class="instEntry"><td class="instKey"></td><td class="instVal"></td></tr>');
 
@@ -3375,6 +3637,70 @@ class DataVisualizer {
 
   redrawConnectors() {
     this.jsPlumbInstance.repaintEverything();
+  }
+
+
+  // selectively hiding variables or fields
+  //
+  // note that C++ uses '::' in member function names, so for
+  // the names in hideVarsLst and hideFieldsLst, we can't
+  // reliably split on ':' to reconstruct its original function/class
+  // name and its variable name. e.g., "Computer::setspeed(int):p"
+  //
+  // the more robust strategy is to keep this string intact and try to
+  // reconstruct it when matching up with variables in the execution trace
+  // ... but consider the case where there are NO COLONS in the string,
+  // which indicates a variable/field name that should be matched
+  // regardless of what function/object it belongs to
+  selectivelyHideVarsAndFields(hideVarsLst, hideFieldsLst) {
+    if (hideVarsLst.length > 0) {
+      this.hideVarsSet = d3.map();
+      hideVarsLst.forEach(e => this.hideVarsSet.set(e, true));
+    } else {
+      this.hideVarsSet = null; // reset
+    }
+
+    if (hideFieldsLst.length > 0) {
+      this.hideFieldsSet = d3.map();
+      hideFieldsLst.forEach(e => this.hideFieldsSet.set(e, true));
+    } else {
+      this.hideFieldsSet = null; // reset
+    }
+
+    // now that this.hideVarsSet and this.hideFieldsSet have been updated ...
+    this.precomputeCurTraceLayouts(); // recompute layouts to account for hidden vars/objects
+    this.renderDataStructures(this.owner.curInstr); // render current step again
+    //this.owner.updateOutput(); // alternatively, try this
+  }
+
+  // precondition: obj[0] is in {'INSTANCE', 'INSTANCE_PPRINT', 'CLASS'}
+  // returns: [class name, header length]
+  static getClassInstanceMetadata(obj) {
+    let typ = obj[0];
+    assert(typ == 'INSTANCE' || typ == 'INSTANCE_PPRINT' || typ == 'CLASS');
+    let className = obj[1]; // might possibly be ''
+    let headerLength = (typ == 'INSTANCE') ? 2 : 3;
+    return [className, headerLength];
+  }
+
+  // returns true if funcname:varname is in this.hideVarsSet
+  // OR if varname alone (without a funcname qualifier) is in this.hideVarsSet
+  inHideVarsSet(funcname, varname) {
+    return DataVisualizer._inHideSetHelper(this.hideVarsSet, funcname, varname);
+  }
+  // same as inHideVarsSet except for classname/fieldname in this.hideFieldsSet
+  inHideFieldsSet(classname, fieldname) {
+    return DataVisualizer._inHideSetHelper(this.hideFieldsSet, classname, fieldname);
+  }
+
+  static _inHideSetHelper(myMap, first, second) {
+    if (!myMap) {
+      return false;
+    } else if (!first) { // only match on second, in that case
+      return myMap.has(second);
+    } else { // match on either first:second or second
+      return myMap.has(first + ':' + second) || myMap.has(second);
+    }
   }
 
 } // END class DataVisualizer
@@ -3900,9 +4226,11 @@ class NavigationController {
       this.customizeVizOptionsShown = true;
 
       uiControlsPane.append(' \
-        <div style="margin-top: 5px;"/>\
-          (move objects around by <b>dragging</b>, but their positions won\'t be shared in URL or live chat)\
-          <div style="margin-top: 8px; margin-bottom: 5px;">\
+        <div style="margin-top: 8px;"/>\
+          <font color="#e93f34">Warning:</font> Reloading this page loses all changes;\
+          customizations <em>NOT</em> shared in URL or chat sessions\
+          <p/><b>Drag</b> any object around to move it. Customize its pointers:\
+          <div style="margin-top: 12px; margin-bottom: 5px;">\
           Line style:\
           <select id="jsplumbConnectorType">\
             <option value="StateMachine" selected>Default</option>\
@@ -3918,9 +4246,21 @@ class NavigationController {
           <div class="sliderWrapper">Gap: <input type="range" min="0" max="50" value="0" class="jsplumbOptionSlider" id="gap"><span class="sliderVal">0</span></div>\
           <div class="sliderWrapper">Midpoint: <input type="range" min="0" max="10" value="0.5" step="0.5" class="jsplumbOptionSlider" id="midpoint"><span class="sliderVal">0.5</span></div>\
           <div class="sliderWrapper">CornerRadius: <input type="range" min="0" max="10" value="0" class="jsplumbOptionSlider" id="cornerRadius"><span class="sliderVal">0</span></div>\
-          <div style="margin-top: 10px;" class="sliderWrapper">Arrow length: <input type="range" min="1" max="30" value="10" class="jsplumbOptionSlider" id="arrowLength"><span class="sliderVal">10</span></div>\
+          <div class="sliderWrapper">Arrow length: <input type="range" min="1" max="30" value="10" class="jsplumbOptionSlider" id="arrowLength"><span class="sliderVal">10</span></div>\
           <div class="sliderWrapper">Arrow width: <input type="range" min="1" max="30" value="7" class="jsplumbOptionSlider" id="arrowWidth"><span class="sliderVal">7</span></div>\
           <div class="sliderWrapper">Arrow fold: <input type="range" min="0" max="1" value="0.55" step="0.05" class="jsplumbOptionSlider" id="arrowFoldback"><span class="sliderVal">0.55</span></div>\
+          <div id="selectiveHideDiv" style="margin-top: 15px; padding: 6px 6px 6px 6px; border: 1px solid #ccc;">\
+            <b>Hide variables/fields</b> (elements may end up out of order, so reload page to reset)<br/>\
+            <button id="updateHideVarsBtn" style="margin-top: 8px;">Update visualization</button>\
+            <p/>All choices below; use part after colon to match all variables/fields with that name.<br/>\
+            <font color="#e93f34">(Double-check your spelling!)</font>\
+            <p/>Hide these variables:<br/>\
+            <textarea id="hideVars" rows="3" cols="70"/>\
+            <div id="hideVarsChoices" style="width: 500px;"></div>\
+            <p style="margin-top: 15px;"/>Hide these object fields:<br/>\
+            <textarea id="hideFields" rows="3" cols="70"/>\
+            <div id="hideFieldsChoices" style="width: 500px;"></div>\
+          </div>\
         </div>\
       ');
 
@@ -4012,6 +4352,24 @@ class NavigationController {
       }).val('StateMachine').change(); // <-- trigger a change event on this
                                        // initial setting to get the change
                                        // handler above to run
+
+
+      // set up infrastructure for showing/hiding variables / object fields
+      let allVarnames = this.owner.dataViz.getAllProgramVarnames();
+      let allFieldnames = this.owner.dataViz.getAllProgramObjectFieldNames();
+
+      let varnameChoices = varlistToHtml(allVarnames);
+      let fieldnameChoices = varlistToHtml(allFieldnames);
+
+      uiControlsPane.find('#hideVarsChoices').html('<b><em>Choices:</em></b> ' + varnameChoices);
+      uiControlsPane.find('#hideFieldsChoices').html('<b><em>Choices:</em></b> ' + fieldnameChoices);
+
+      uiControlsPane.find('#updateHideVarsBtn').click(() => {
+        let hideVarsLst = processHideString(uiControlsPane.find('#hideVars').val());
+        let hideFieldsLst = processHideString(uiControlsPane.find('#hideFields').val());
+        this.owner.dataViz.selectivelyHideVarsAndFields(hideVarsLst, hideFieldsLst);
+      });
+
       return false; // don't follow the link and reload the page!
     });
   }

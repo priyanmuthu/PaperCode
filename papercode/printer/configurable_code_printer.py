@@ -21,6 +21,7 @@ class ConfigurableCodePrinter(CodePrinter):
         soup = BeautifulSoup(template_text, 'html.parser')
         self.base_div.generate_html(soup, self.paper)
         self.base_div.get_auxiliary_pages(soup)
+        self.base_div.get_diff_auxiliary_pages(soup)
         if self.sidebar_div is not None:
             self.sidebar_div.generate_html(soup)
         return str(soup)
