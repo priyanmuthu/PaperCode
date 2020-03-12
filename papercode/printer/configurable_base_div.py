@@ -21,7 +21,7 @@ class Page:
         self.page_code_lines = []
         self.page_sidebar_line_nos = []
         self.page_sidebar_code_lines = []
-        self.page_no = page_no
+        self.page_no = str(page_no)
 
 class AuxPartition:
     def __init__(self, partition: CodePartition, line: int, page: int):
@@ -58,6 +58,7 @@ class ConfigurableBaseDiv(BaseDiv):
         self.line_page_dict = {}
         self.auxiliary_partition_dict = {}
         self.diff_auxiliary_partition_dict = {}
+        self.all_pages = []
 
 
 
@@ -147,7 +148,8 @@ class ConfigurableBaseDiv(BaseDiv):
             page_count += 1
             line_count = 0
             current_page = Page(str(page_count))
-
+        for page in self.pages:
+            self.all_pages.append(self.pages[page])
         self.add_pages_html(soup, self.pages)
         
     def add_pages_html(self, soup: BeautifulSoup, pages: dict):
@@ -264,7 +266,6 @@ class ConfigurableBaseDiv(BaseDiv):
         # Get aux parition by page
         page_aux_dict = defaultdict(list)
         for aux_line in self.auxiliary_partition_dict:
-            print(aux_line, self.line_page_dict[aux_line])
             aux_part = AuxPartition(self.auxiliary_partition_dict[aux_line], aux_line, self.line_page_dict[aux_line])
             page_aux_dict[self.line_page_dict[aux_line]].append(aux_part)
 
@@ -286,7 +287,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 cur_aux_page.page_sidebar_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
                 cur_aux_page.page_sidebar_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
                 used_lines = set()
-                print(page)
+                # print(page)
                 # For each partition - add to page if possible
                 for aPart in aux_parts:
                     idx = cur_base_page.page_lnos.index(aPart.line)
@@ -311,15 +312,15 @@ class ConfigurableBaseDiv(BaseDiv):
                             used_lines = used_lines.union(selected_lnos)
                             cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
                             cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
-                    print(aPart.partition.length, len(selected_lnos), selected_lnos)
                 pass
-                print(used_lines)
+                # print(used_lines)
                 # print(cur_aux_page.page_line_nos)
                 # print(cur_aux_page.page_code_lines)
-                print('------------------------------------------------')
+                # print('------------------------------------------------')
                 aux_pages[aux_page_count] = cur_aux_page
                 aux_page_count += 1
-
+        for page in aux_pages:
+            self.all_pages.append(aux_pages[page])
         self.add_pages_html(soup, aux_pages)
     
     def get_diff_auxiliary_pages(self, soup: BeautifulSoup):
@@ -331,7 +332,6 @@ class ConfigurableBaseDiv(BaseDiv):
         # Get aux parition by page
         page_aux_dict = defaultdict(list)
         for aux_line in self.diff_auxiliary_partition_dict:
-            print(aux_line, self.line_page_dict[aux_line])
             aux_part = AuxPartition(self.diff_auxiliary_partition_dict[aux_line], aux_line, self.line_page_dict[aux_line])
             page_aux_dict[self.line_page_dict[aux_line]].append(aux_part)
 
@@ -378,7 +378,6 @@ class ConfigurableBaseDiv(BaseDiv):
                             used_lines = used_lines.union(selected_lnos)
                             cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
                             cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
-                    print(aPart.partition.length, len(selected_lnos), selected_lnos)
                 pass
                 # print(used_lines)
                 # print(cur_aux_page.page_line_nos)
@@ -386,7 +385,9 @@ class ConfigurableBaseDiv(BaseDiv):
                 # print('------------------------------------------------')
                 aux_pages[aux_page_count] = cur_aux_page
                 aux_page_count += 1
-
+        
+        for page in aux_pages:
+            self.all_pages.append(aux_pages[page])
         self.add_pages_html(soup, aux_pages)
 
         # End of function
