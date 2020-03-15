@@ -7,6 +7,7 @@ from collections import defaultdict
 from os.path import abspath
 import difflib
 import uuid
+import textwrap
 
 class PagePartition:
     def __init__(self, base: CodePartition = None, node: Node = None, sidebar: CodePartition = None):
@@ -22,6 +23,28 @@ class Page:
         self.page_sidebar_line_nos = []
         self.page_sidebar_code_lines = []
         self.page_no = str(page_no)
+        self.page_length = 0
+        self.sidebar_line_dict = {}
+        self.sidebar_code_dict = {}
+        self.sidebar_wrap_dict = {}
+    
+    def process_sidebar(self):
+        cur_line = 0
+        wrapper = textwrap.TextWrapper(width=50)
+        while(cur_line < self.page_length):
+            if cur_line in self.sidebar_line_dict:
+                self.page_sidebar_line_nos.append(self.sidebar_line_dict[cur_line])
+                self.page_sidebar_code_lines.append(self.sidebar_code_dict[cur_line])
+                line_length = 1
+                if len(self.sidebar_wrap_dict[cur_line]) > 50:
+                    line_length = len(wrapper.wrap(self.sidebar_wrap_dict[cur_line]))
+                print(self.sidebar_line_dict[cur_line], line_length, len(self.sidebar_wrap_dict[cur_line]))
+                cur_line += line_length # Should be the wrapped line length
+            else:
+                self.page_sidebar_line_nos.append(' ')
+                self.page_sidebar_code_lines.append(' ')
+                cur_line += 1
+        pass
 
 class AuxPartition:
     def __init__(self, partition: CodePartition, line: int, page: int):
@@ -59,6 +82,8 @@ class ConfigurableBaseDiv(BaseDiv):
         self.auxiliary_partition_dict = {}
         self.diff_auxiliary_partition_dict = {}
         self.all_pages = []
+        self.code_page_line_dict = {}
+        self.sidebar_nodes_dict = {}
 
 
 
@@ -88,6 +113,7 @@ class ConfigurableBaseDiv(BaseDiv):
             partitions = self.remove_empty_partitions(partitions)
         # Table-of-contents
         self.pre_calculcate_pages(partitions, paper) # Pre-calculating pages
+        # Todo: Fix wraping here
         partitions = self.table_of_contents(partitions)
 
         # Create partition node dict
@@ -101,15 +127,16 @@ class ConfigurableBaseDiv(BaseDiv):
 
         for p in partitions:
             part_length = p.base.length
-            block_length = part_length
-            if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
+            if (line_count + part_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 # Start a new page
+                current_page.page_length = line_count
                 self.pages[page_count] = current_page
+                current_page.process_sidebar()
                 page_count += 1
                 line_count = 0
                 current_page = Page(str(page_count))
             lnos = p.base.line_nos
-            line_nos = [str(lno) for lno in p.base.line_nos]
+            line_nos = [self.get_line_no_str(lno) for lno in p.base.line_nos]
             code_lines = p.base.format_code_lines
             sidebar_line_nos = None
             sidebar_code_lines = None
@@ -123,134 +150,125 @@ class ConfigurableBaseDiv(BaseDiv):
                 if p.base.partition_type == FunctionNode:
                     line_nos[0] = '<span class="boldlinenos">' + line_nos[0] + '</span>'
 
-            for i in range(part_length):
-                if (line_count + 1) > max_lines:
+            for i in range(len(lnos)):
+                line_length = self.code_file.line_wrap_length[lnos[i]]
+                if (line_count + line_length) > max_lines:
+                    current_page.page_length = line_count
+                    current_page.process_sidebar()
                     self.pages[page_count] = current_page
                     page_count += 1
                     line_count = 0
                     current_page = Page(str(page_count))
                 
-                line_count += 1
                 self.line_page_dict[lnos[i]] = page_count
                 current_page.page_lnos.append(lnos[i])
                 current_page.page_line_nos.append(line_nos[i])
                 current_page.page_code_lines.append(code_lines[i])
+                # Todo: wrap text modifications
                 if sidebar_line_nos and sidebar_code_lines and i < sidebar_length:
-                    current_page.page_sidebar_line_nos.append(sidebar_line_nos[i])
-                    current_page.page_sidebar_code_lines.append(sidebar_code_lines[i])
-                else:
-                    current_page.page_sidebar_line_nos.append(' ')
-                    current_page.page_sidebar_code_lines.append(' ')
+                    current_page.sidebar_line_dict[line_count] = sidebar_line_nos[i]
+                    current_page.sidebar_code_dict[line_count] = sidebar_code_lines[i]
+                    if type(sidebar_line_nos[i]) is str:
+                        current_page.sidebar_wrap_dict[line_count] = ' '
+                    else:
+                        current_page.sidebar_wrap_dict[line_count] = self.code_file.all_lines[sidebar_line_nos[i]-1]
+
+                    # current_page.page_sidebar_line_nos.append(sidebar_line_nos[i])
+                    # current_page.page_sidebar_code_lines.append(sidebar_code_lines[i])
+                # else:
+                #     current_page.page_sidebar_line_nos.append(' ')
+                #     current_page.page_sidebar_code_lines.append(' ')
+                line_count += line_length
 
         if len(current_page.page_line_nos) > 0:
-            # There are still some code left
+            # There is still some code left
+            current_page.page_length = line_count
             self.pages[page_count] = current_page
+            current_page.process_sidebar()
             page_count += 1
             line_count = 0
             current_page = Page(str(page_count))
         for page in self.pages:
             self.all_pages.append(self.pages[page])
         self.add_pages_html(soup, self.pages)
-        
+    
+    def get_line_no_str(self, lno: int):
+        lStr = [str(lno)]
+        for i in range(self.code_file.line_wrap_length[lno] - 1):
+            lStr.append("*")
+        return '\n'.join(lStr)
+
     def add_pages_html(self, soup: BeautifulSoup, pages: dict):
         # Generate a table for each page
         for page in pages:
-            highlight_table = self.generate_highlight_table(soup)
-            page_line_nos = pages[page].page_line_nos
-            page_code_lines = pages[page].page_code_lines
-            page_sidebar_line_nos = pages[page].page_sidebar_line_nos
-            page_sidebar_code_lines = pages[page].page_sidebar_code_lines
-            # For each line create a table row
-            line_str = '<pre>' + '\n'.join(page_line_nos) + '</pre>'
-            code_str = '<pre>' + '\n'.join(page_code_lines) + '</pre>'
-            
-            # Generate QR-Code and header/footer elements
-            # qr_td_1 = soup.new_tag('td')
-            # qr_td_1['style'] = "position:relative;"
+            # highlight_table = self.generate_highlight_table(soup)
+            highlight_table, sidebar_table = self.setup_page(soup)
 
-            # qr_td_2 = soup.new_tag('td')
-            # qr_td_2['style'] = "position:relative;"
+            cur_page: Page = pages[page]
 
-            # qr_td_3 = soup.new_tag('td')
-            # qr_td_3['style'] = "position:relative;"
-            # qrcode = soup.new_tag('img')
-            # qrcode['class'] = ['qrcode']
-            # qrcode['src'] = "data:image/png;base64,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"
-            # qr_td_3.append(qrcode)
+            for idx in range(len(cur_page.page_lnos)):
+                # new table row for each line
+                line_str = '<pre>' + cur_page.page_line_nos[idx] + '</pre>'
+                code_str = '<pre>' + cur_page.page_code_lines[idx] + '</pre>'
 
-            # qr_td_4 = soup.new_tag('td')
-            # qr_td_4['style'] = "position:relative;"
-            
-            # qr_table_row = soup.new_tag('tr')
-            # qr_table_row.append(qr_td_1)
-            # qr_table_row.append(qr_td_2)
-            # qr_table_row.append(qr_td_3)
-            # qr_table_row.append(qr_td_4)
-            # highlight_table.append(qr_table_row)
+                # Generating the line no div
+                line_no_div = soup.new_tag('div')
+                line_no_div['class'] = ['linenodiv']
+                line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
 
-            # Generating the line no div
+                # Generating the line no td
+                line_table_data = soup.new_tag('td')
+                line_table_data['class'] = ['linenos']
+                line_table_data.append(line_no_div)
+
+                # Generating the code highlight div
+                highlight_div = soup.new_tag('div')
+                highlight_div['class'] = ['highlight']
+                highlight_div.append(BeautifulSoup(code_str, 'html.parser'))
+
+                # Generating the code td
+                code_table_data = soup.new_tag('td')
+                code_table_data['class'] = ['code']
+                code_table_data.append(highlight_div)
+
+                table_row = soup.new_tag('tr')
+                table_row.append(line_table_data)
+                table_row.append(code_table_data)
+                highlight_table.append(table_row)
+
+            # End of for
+            # generating table for sidebar
+            self.get_pages_sidebar(cur_page.page_sidebar_line_nos, cur_page.page_sidebar_code_lines, sidebar_table, soup)
+    
+    def get_pages_sidebar(self, sidebar_line_nos: list, sidebar_code_lines: list, side_table, soup: BeautifulSoup):
+        # side_table = self.generate_sidebar_table(soup)
+        for i in range(len(sidebar_line_nos)):
+            line_str = '<pre>' + str(sidebar_line_nos[i]) + '</pre>'
+            code_str = '<pre>' + sidebar_code_lines[i] + '</pre>'
+                
+            # Generating the table row
             line_no_div = soup.new_tag('div')
             line_no_div['class'] = ['linenodiv']
             line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
-            
-            # Generating the line no td
+
             line_table_data = soup.new_tag('td')
-            line_table_data['class'] = ['linenos']
+            line_table_data['class'] = ['sidelinenos']
             line_table_data.append(line_no_div)
 
-            # Generating the code highlight div
+
             highlight_div = soup.new_tag('div')
-            highlight_div['class'] = ['highlight']
+            highlight_div['class'] = ['sidecode']
             highlight_div.append(BeautifulSoup(code_str, 'html.parser'))
 
-            # Generating the code td
             code_table_data = soup.new_tag('td')
             code_table_data['class'] = ['code']
             code_table_data.append(highlight_div)
 
-            # Generating the side bar table
-            sidebar_table_data = soup.new_tag('td')
-            sidebar_table_data['class'] = ['sidebar']
-            side_table = self.get_pages_sidebar(page_sidebar_line_nos, page_sidebar_code_lines, soup)
-            sidebar_table_data.append(side_table)
-
             table_row = soup.new_tag('tr')
             table_row.append(line_table_data)
             table_row.append(code_table_data)
-            table_row.append(sidebar_table_data)
-            highlight_table.append(table_row)
-    
-    def get_pages_sidebar(self, sidebar_line_nos: list, sidebar_code_lines: list, soup: BeautifulSoup):
-        side_table = soup.new_tag('table')
-        side_table['class'] = ['sidebartable']
-        side_table['cellspacing'] = "0"
 
-        line_str = '<pre>' + '\n'.join(str(lno) for lno in sidebar_line_nos) + '</pre>'
-        code_str = '<pre>' + '\n'.join(sidebar_code_lines) + '</pre>'
-            
-        # Generating the table row
-        line_no_div = soup.new_tag('div')
-        line_no_div['class'] = ['linenodiv']
-        line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
-
-        line_table_data = soup.new_tag('td')
-        line_table_data['class'] = ['sidelinenos']
-        line_table_data.append(line_no_div)
-
-
-        highlight_div = soup.new_tag('div')
-        highlight_div['class'] = ['highlight']
-        highlight_div.append(BeautifulSoup(code_str, 'html.parser'))
-
-        code_table_data = soup.new_tag('td')
-        code_table_data['class'] = ['code']
-        code_table_data.append(highlight_div)
-
-        table_row = soup.new_tag('tr')
-        table_row.append(line_table_data)
-        table_row.append(code_table_data)
-
-        side_table.append(table_row)
+            side_table.append(table_row)
         return side_table
 
     def get_auxiliary_pages(self, soup: BeautifulSoup):
@@ -468,10 +486,9 @@ class ConfigurableBaseDiv(BaseDiv):
         for p in partitions:
             # base, side bar : create tables seperately for both
             part_length = p.base.length
-            block_length = part_length
 
             # If the new partition exceeds the page limit and the page gap is not more than half the page
-            if (line_count + block_length) > max_lines and (max_lines - line_count) < max_lines/2:
+            if (line_count + part_length) > max_lines and (max_lines - line_count) < max_lines/2:
                 page_count += 1
                 line_count = 0
 
@@ -500,7 +517,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 call_locs[call_line] = '{0} : page {1}, line {2}'.format(cfunc.name, cfunc_page, cfunc_line)
                 # print(call_locs[call_line])
             # go through the partition and check if the call line already has any stuff in it
-            for i in range(func_base_part.length):
+            for i in range(len(func_base_part.line_nos)):
                 lno = func_base_part.line_nos[i]
                 sidebar_scl = func_sidebar.source_code_lines[i]
                 if lno in call_locs and sidebar_scl.strip() == '':
@@ -508,71 +525,50 @@ class ConfigurableBaseDiv(BaseDiv):
                     func_sidebar.format_code_lines[i] = call_locs[lno]
         return partitions
 
-    def generate_highlight_table(self, soup: BeautifulSoup):
+    def setup_page(self, soup: BeautifulSoup):
         html_body = soup.find('body')
+
+        container_div = soup.new_tag('div')
+        container_div['class'] = ['container']
+        html_body.append(container_div)
+
+        left_div = soup.new_tag('div')
+        left_div['class'] = ['leftdiv']
+        container_div.append(left_div)
+
+        base_table = soup.new_tag('table')
+        base_table['class'] = ['highlighttable']
+        base_table['cellspacing'] = "0"
+        left_div.append(base_table)
+
+        right_div = soup.new_tag('div')
+        right_div['class'] = ['rightdiv']
+        container_div.append(right_div)
+
+        side_table = soup.new_tag('table')
+        side_table['class'] = ['highlighttable']
+        side_table['cellspacing'] = "0"
+        right_div.append(side_table)
+
+        return base_table, side_table
+
+
+    def generate_highlight_table(self, soup: BeautifulSoup):
+        # html_body = soup.find('body')
+        right_div = soup.find('div', {'class': 'leftdiv'})
         table = soup.new_tag('table')
         table['class'] = ['highlighttable']
         table['cellspacing'] = "0"
-        html_body.append(table)
+        right_div.append(table)
         return table
-
-
-    def get_table_row_from_partition(self, soup: BeautifulSoup, part: dict):
-        # Making the base
-        base_part = part.base
-        part_uuid = uuid.uuid4().hex
-        _, code_base = UtilMethods.get_pre_formated_text(base_part, self.code_file.language)
-        # code_base = code_base.splitlines()[:base_part['length']]
-        # code_base = '\n'.join(code_base)
-        line_str = '<pre>' + '\n'.join(str(lno) for lno in base_part.line_nos) + '</pre>'
-        
-        if base_part['partition_type'] == FunctionNode:
-            lines = [str(lno) for lno in base_part.line_nos]
-            lines[0] = '<span class="boldlinenos">' + lines[0] + '</span>'
-            line_str = '<pre>' + '\n'.join(lines) + '</pre>'
-        
-        # Generating the line no div
-        line_no_div = soup.new_tag('div')
-        line_no_div['class'] = ['linenodiv']
-        line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
-        
-        # Generating the line no td
-        line_table_data = soup.new_tag('td')
-        if part.node not in self.elements_line_td:
-            self.elements_line_td[part.node] = part_uuid + '-line'
-            line_table_data['id'] = self.elements_line_td[part.node]
-        line_table_data['class'] = ['linenos']
-        line_table_data.append(line_no_div)
-
-        # Generating the code highlight div
-        highlight_div = soup.new_tag('div')
-        highlight_div['class'] = ['highlight']
-        highlight_div.append(BeautifulSoup(code_base, 'html.parser'))
-
-        # Generating the code td
-        code_table_data = soup.new_tag('td')
-        if part.node not in self.elements_code_td:
-            self.elements_code_td[part.node] = part_uuid + '-code'
-            code_table_data['id'] = self.elements_code_td[part.node]
-        code_table_data['class'] = ['code']
-        code_table_data.append(highlight_div)
-
-        # Generating the side bar table
-        sidebar_table_data = soup.new_tag('td')
-        if part.node not in self.elements_sidebar_td:
-            self.elements_sidebar_td[part.node] = part_uuid + '-sidebar'
-            sidebar_table_data['id'] = self.elements_sidebar_td[part.node]
-        sidebar_table_data['class'] = ['sidebar']
-        if not(part.sidebar is None) and part.sidebar.length > 0:
-            side_table = self.get_table_for_sidebar(soup, [part.sidebar])
-            sidebar_table_data.append(side_table)
-
-        table_row = soup.new_tag('tr')
-        table_row.append(line_table_data)
-        table_row.append(code_table_data)
-        table_row.append(sidebar_table_data)
-
-        return table_row
+    
+    def generate_sidebar_table(self, soup: BeautifulSoup):
+        right_div = soup.find('div', {'class': 'rightdiv'})
+        table = soup.new_tag('table')
+        table['class'] = ['highlighttable']
+        table['cellspacing'] = "0"
+        right_div.append(table)
+        return table
     
     def getPartitions(self, node: Node):
         partitions = []
@@ -682,17 +678,22 @@ class ConfigurableBaseDiv(BaseDiv):
             source_code_lines.extend(part.source_code_lines)
             current_line = end_line
         
+        
+        base_length = sum([self.code_file.line_wrap_length[l] for l in line_nos])
+
         # Matching sidebar to the function length
-        remaining_lines = len(line_nos) - len(sidebar_line_nos)
+        remaining_lines = base_length - len(sidebar_line_nos)
         if remaining_lines > 0:
             sidebar_line_nos.extend([' ' for i in range(remaining_lines)])
             sidebar_code.extend([' ' for i in range(remaining_lines)])
         
+        sidebar_length = len(sidebar_line_nos)
+
         sidebar_part = CodePartition(
             sidebar_line_nos, 
             sidebar_code, 
             UtilMethods.get_preformated_innerhtml('\n'.join(sidebar_code), self.code_file.language),
-            len(sidebar_line_nos), 
+            sidebar_length, 
             CommentNode
         )
 
@@ -700,7 +701,7 @@ class ConfigurableBaseDiv(BaseDiv):
             line_nos, 
             source_code_lines, 
             UtilMethods.get_preformated_innerhtml('\n'.join(source_code_lines), self.code_file.language),
-            max(len(line_nos), len(sidebar_line_nos)), 
+            max(base_length, sidebar_length), 
             FunctionNode
         )
 

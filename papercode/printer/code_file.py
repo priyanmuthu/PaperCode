@@ -7,6 +7,7 @@ import jedi
 import json
 import tempfile
 import subprocess
+import textwrap
 
 class CodePartition:
     def __init__(self, line_nos: list, source_code_lines: list, format_code_lines: list, length: int, partition_type: type):
@@ -18,6 +19,7 @@ class CodePartition:
 
 class CodeFile:
     def __init__(self, file_path: str, project_path: str = None, lang: Language = Language.Python):
+        self.MAX_LINE_LENGTH = 89
         self.file_path = file_path
         self.project_path = project_path
         self.source_code = UtilMethods.text_from_file(file_path)
@@ -26,12 +28,22 @@ class CodeFile:
         self.syntax_tree = None
         self.language = lang
         self.preformated_all_lines = UtilMethods.get_preformated_innerhtml('\n'.join(self.all_lines), self.language)
+        self.line_wrap_length = self.wrap_lines_process();
         self.is_sort_topo_sort = True
     
     def all_lines_process(self):
         for idx in range(len(self.all_lines)):
             if self.all_lines[idx] == '':
                 self.all_lines[idx] = ' '
+    
+    def wrap_lines_process(self):
+        wrapper = textwrap.TextWrapper(width=self.MAX_LINE_LENGTH)
+        line_len = {}
+        for idx in range(len(self.all_lines)):
+            line_len[idx+1] = max(len(wrapper.wrap(self.all_lines[idx])), 1)
+        
+        return line_len
+        # End of func
 
     def process(self):
         pass
@@ -59,7 +71,8 @@ class CodeFile:
         line_nos = [i for i in range(start_line, end_line+1)]
         source_code_lines = list(map(lambda x: self.all_lines[x-1], line_nos))
         format_code_lines = list(map(lambda x: self.preformated_all_lines[x-1], line_nos))
-        code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, len(line_nos), partition_type)
+        length = sum([self.line_wrap_length[l] for l in line_nos])
+        code_partition = CodePartition(line_nos, source_code_lines, format_code_lines, length, partition_type)
         return code_partition
     
     def get_hidden_comment_node(self, start_line, end_line, hide_string, partition_type):

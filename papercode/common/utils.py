@@ -103,6 +103,7 @@ class UtilMethods:
             'preferCSSPageSize': True,
             'printBackground': True,
             'displayHeaderFooter': True,
+            'scale': 0.8,
             'margin': { 'top': "1cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" }
         })
         await browser.close()

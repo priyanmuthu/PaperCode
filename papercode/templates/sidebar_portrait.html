@@ -29,6 +29,7 @@ Licensed under the BSD license, see LICENSE for details.
 }
 .container{
     display: flex;
+    page-break-after: always;
 }
 .leftdiv{
     width: 700px;
@@ -49,9 +50,9 @@ span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
 span.diffadd {background-color:#00FF00;}
 span.diffrem {background-color:#FFCDD2;}
 img.qrcode {width: 100px; height: 100px; position:absolute; left: 200px; top: 10px;}
-pre { line-height: 125%; margin: 0px;}
-pre { overflow: hidden; max-width: 700px;}
-.sidebar pre { overflow: hidden; max-width: 500px;}
+pre { line-height: 125%; margin: 0px; white-space:pre-wrap; overflow: hidden; max-width: 700px;}
+.highlight pre {min-width: 700px;}
+.sidecode pre { max-width: 400px; min-width: 400px;}
 body .hll { background-color: #ffffff }
 body  { background: #ffffff; }
 body .c { color: #408080; font-style: italic } /* Comment */
@@ -126,14 +127,12 @@ body .il { color: #666666 } /* Literal.Number.Integer.Long */
 </head>
 <body>
   <!-- <div class="container">
-    <div class="rightdiv">
-      <table class="highlighttable"></table>
-    </div>
     <div class="leftdiv">
+    </div>
+    <div class="rightdiv">
       
     </div>
   </div> -->
-  <!-- <table class="highlighttable"></table> -->
 </body>
 </html>
 

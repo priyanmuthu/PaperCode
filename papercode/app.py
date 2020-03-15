@@ -13,12 +13,6 @@ def run():
     # runpy()
     runts()
     # file_compare_test()
-    # pdf_test()
-
-def pdf_test():
-    pdf_file_path = abspath('papercode/temp/pup2.pdf')
-    raw = parser.from_file(pdf_file_path)
-    print(raw['content'])
 
 def file_compare_test():
     # https://stackoverflow.com/questions/9505822/getting-line-numbers-that-were-changed
@@ -56,6 +50,7 @@ def runts():
     pdf_file_path = abspath('papercode/temp/pup2.pdf')
     html_path = abspath('papercode/temp/high3.html')
     code_file = TsCodeFile(file_path, project_path)
+    # return
     code_file.process()
     # code_file.print_tree(code_file.syntax_tree)
     base_div = ConfigurableBaseDiv(code_file)
