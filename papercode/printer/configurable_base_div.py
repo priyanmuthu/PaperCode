@@ -33,12 +33,11 @@ class Page:
         wrapper = textwrap.TextWrapper(width=50)
         while(cur_line < self.page_length):
             if cur_line in self.sidebar_line_dict:
+                line_length = self.sidebar_wrap_dict[cur_line]
+                if(line_length > 1):
+                    print(self.sidebar_line_dict[cur_line], line_length)
                 self.page_sidebar_line_nos.append(self.sidebar_line_dict[cur_line])
                 self.page_sidebar_code_lines.append(self.sidebar_code_dict[cur_line])
-                line_length = 1
-                if len(self.sidebar_wrap_dict[cur_line]) > 50:
-                    line_length = len(wrapper.wrap(self.sidebar_wrap_dict[cur_line]))
-                print(self.sidebar_line_dict[cur_line], line_length, len(self.sidebar_wrap_dict[cur_line]))
                 cur_line += line_length # Should be the wrapped line length
             else:
                 self.page_sidebar_line_nos.append(' ')
@@ -82,8 +81,8 @@ class ConfigurableBaseDiv(BaseDiv):
         self.auxiliary_partition_dict = {}
         self.diff_auxiliary_partition_dict = {}
         self.all_pages = []
-        self.code_page_line_dict = {}
-        self.sidebar_nodes_dict = {}
+        self.code_page_line_dict = {}   # Dictionary [code line] -> [page line]
+
 
 
 
@@ -161,6 +160,7 @@ class ConfigurableBaseDiv(BaseDiv):
                     current_page = Page(str(page_count))
                 
                 self.line_page_dict[lnos[i]] = page_count
+                self.code_page_line_dict[lnos[i]] = line_count
                 current_page.page_lnos.append(lnos[i])
                 current_page.page_line_nos.append(line_nos[i])
                 current_page.page_code_lines.append(code_lines[i])
@@ -169,9 +169,9 @@ class ConfigurableBaseDiv(BaseDiv):
                     current_page.sidebar_line_dict[line_count] = sidebar_line_nos[i]
                     current_page.sidebar_code_dict[line_count] = sidebar_code_lines[i]
                     if type(sidebar_line_nos[i]) is str:
-                        current_page.sidebar_wrap_dict[line_count] = ' '
+                        current_page.sidebar_wrap_dict[line_count] = 1
                     else:
-                        current_page.sidebar_wrap_dict[line_count] = self.code_file.all_lines[sidebar_line_nos[i]-1]
+                        current_page.sidebar_wrap_dict[line_count] = self.code_file.sidebar_line_wrap_length[sidebar_line_nos[i]]
 
                     # current_page.page_sidebar_line_nos.append(sidebar_line_nos[i])
                     # current_page.page_sidebar_code_lines.append(sidebar_code_lines[i])
@@ -300,15 +300,17 @@ class ConfigurableBaseDiv(BaseDiv):
                 cur_base_page = self.pages[page]
                 cur_aux_page = Page(str(page) + '-a')
                 # Nothing in the sidebar
-                cur_aux_page.page_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_sidebar_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_sidebar_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
+                cur_aux_page.page_line_nos = [' ' for i in range(cur_base_page.page_length)]
+                cur_aux_page.page_code_lines = [' ' for i in range(cur_base_page.page_length)]
+                cur_aux_page.page_sidebar_line_nos = [' ' for i in range(cur_base_page.page_length)]
+                cur_aux_page.page_sidebar_code_lines = [' ' for i in range(cur_base_page.page_length)]
+                aux_page_lnos = [i for i in range(cur_base_page.page_length)]
                 used_lines = set()
                 # print(page)
                 # For each partition - add to page if possible
                 for aPart in aux_parts:
-                    idx = cur_base_page.page_lnos.index(aPart.line)
+                    idx = self.code_page_line_dict[aPart.line]
+                    # idx = cur_base_page.page_lnos.index(aPart.line)
                     selected_lnos = cur_base_page.page_lnos[idx: (idx + aPart.partition.length)]
                     # If the lengths match, and there aren't any conflicts then directly add
                     if len(selected_lnos) == aPart.partition.length:

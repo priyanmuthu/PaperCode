@@ -20,6 +20,7 @@ class CodePartition:
 class CodeFile:
     def __init__(self, file_path: str, project_path: str = None, lang: Language = Language.Python):
         self.MAX_LINE_LENGTH = 89
+        self.MAX_SIDEBAR_LINE_LENGTH = 50
         self.file_path = file_path
         self.project_path = project_path
         self.source_code = UtilMethods.text_from_file(file_path)
@@ -29,6 +30,7 @@ class CodeFile:
         self.language = lang
         self.preformated_all_lines = UtilMethods.get_preformated_innerhtml('\n'.join(self.all_lines), self.language)
         self.line_wrap_length = self.wrap_lines_process();
+        self.sidebar_line_wrap_length = self.wrap_sidebar_lines_process();
         self.is_sort_topo_sort = True
     
     def all_lines_process(self):
@@ -38,6 +40,15 @@ class CodeFile:
     
     def wrap_lines_process(self):
         wrapper = textwrap.TextWrapper(width=self.MAX_LINE_LENGTH)
+        line_len = {}
+        for idx in range(len(self.all_lines)):
+            line_len[idx+1] = max(len(wrapper.wrap(self.all_lines[idx])), 1)
+        
+        return line_len
+        # End of func
+    
+    def wrap_sidebar_lines_process(self):
+        wrapper = textwrap.TextWrapper(width=self.MAX_SIDEBAR_LINE_LENGTH)
         line_len = {}
         for idx in range(len(self.all_lines)):
             line_len[idx+1] = max(len(wrapper.wrap(self.all_lines[idx])), 1)
