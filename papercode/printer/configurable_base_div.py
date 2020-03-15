@@ -34,8 +34,6 @@ class Page:
         while(cur_line < self.page_length):
             if cur_line in self.sidebar_line_dict:
                 line_length = self.sidebar_wrap_dict[cur_line]
-                if(line_length > 1):
-                    print(self.sidebar_line_dict[cur_line], line_length)
                 self.page_sidebar_line_nos.append(self.sidebar_line_dict[cur_line])
                 self.page_sidebar_code_lines.append(self.sidebar_code_dict[cur_line])
                 cur_line += line_length # Should be the wrapped line length
@@ -205,8 +203,8 @@ class ConfigurableBaseDiv(BaseDiv):
             highlight_table, sidebar_table = self.setup_page(soup)
 
             cur_page: Page = pages[page]
-
-            for idx in range(len(cur_page.page_lnos)):
+            
+            for idx in range(len(cur_page.page_line_nos)):
                 # new table row for each line
                 line_str = '<pre>' + cur_page.page_line_nos[idx] + '</pre>'
                 code_str = '<pre>' + cur_page.page_code_lines[idx] + '</pre>'
@@ -272,19 +270,22 @@ class ConfigurableBaseDiv(BaseDiv):
         return side_table
 
     def get_auxiliary_pages(self, soup: BeautifulSoup):
+        self.get_augmenting_pages(self.auxiliary_partition_dict, soup)
+
+    def get_augmenting_pages(self, augment_page_dict: dict, soup: BeautifulSoup):
         # Generate auxiliary pages using info from the existing pages.
         aux_page_count = 1
         aux_pages = {}
         # For each auxiliary partition, Check if the line is in the base page
-        for aux_line in self.auxiliary_partition_dict:
+        for aux_line in augment_page_dict:
             if aux_line not in self.line_page_dict:
                 # Do something here
                 pass
 
         # Get aux parition by page
         page_aux_dict = defaultdict(list)
-        for aux_line in self.auxiliary_partition_dict:
-            aux_part = AuxPartition(self.auxiliary_partition_dict[aux_line], aux_line, self.line_page_dict[aux_line])
+        for aux_line in augment_page_dict:
+            aux_part = AuxPartition(augment_page_dict[aux_line], aux_line, self.line_page_dict[aux_line])
             page_aux_dict[self.line_page_dict[aux_line]].append(aux_part)
 
         # Go page by page, and generate aux pages
@@ -300,6 +301,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 cur_base_page = self.pages[page]
                 cur_aux_page = Page(str(page) + '-a')
                 # Nothing in the sidebar
+                cur_aux_page.page_lnos = [i for i in range(cur_base_page.page_length)]
                 cur_aux_page.page_line_nos = [' ' for i in range(cur_base_page.page_length)]
                 cur_aux_page.page_code_lines = [' ' for i in range(cur_base_page.page_length)]
                 cur_aux_page.page_sidebar_line_nos = [' ' for i in range(cur_base_page.page_length)]
@@ -307,18 +309,20 @@ class ConfigurableBaseDiv(BaseDiv):
                 aux_page_lnos = [i for i in range(cur_base_page.page_length)]
                 used_lines = set()
                 # print(page)
+                # print(aux_page_lnos)
                 # For each partition - add to page if possible
+                selected_lines_set = {}
                 for aPart in aux_parts:
                     idx = self.code_page_line_dict[aPart.line]
                     # idx = cur_base_page.page_lnos.index(aPart.line)
-                    selected_lnos = cur_base_page.page_lnos[idx: (idx + aPart.partition.length)]
+                    selected_lnos = aux_page_lnos[idx: (idx + aPart.partition.length)]
+                    # print('select: ', selected_lnos)
                     # If the lengths match, and there aren't any conflicts then directly add
                     if len(selected_lnos) == aPart.partition.length:
                         selected_set = set(selected_lnos)
                         if used_lines.isdisjoint(selected_set):
+                            selected_lines_set[idx] = aPart
                             used_lines = used_lines.union(selected_lnos)
-                            cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
-                            cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
                         else:
                             # Try moving it slightly up and check if it is possible to fit
                             # min_line_no = min(used_lines.intersection(selected_set))
@@ -326,19 +330,24 @@ class ConfigurableBaseDiv(BaseDiv):
                             # print(selected_lnos)
                             pass
                     else:
-                        selected_lnos = cur_base_page.page_lnos[-aPart.partition.length:]
-                        idx = cur_base_page.page_lnos.index(selected_lnos[0])
+                        selected_lnos = aux_page_lnos[-aPart.partition.length:]
+                        idx = aux_page_lnos.index(selected_lnos[0])
                         if used_lines.isdisjoint(set(selected_lnos)):
+                            selected_lines_set[idx] = aPart
                             used_lines = used_lines.union(selected_lnos)
-                            cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
-                            cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
-                pass
+                
+                for idx in selected_lines_set:
+                    aPart = selected_lines_set[idx]
+                    cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
+                    cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
+                
                 # print(used_lines)
                 # print(cur_aux_page.page_line_nos)
                 # print(cur_aux_page.page_code_lines)
                 # print('------------------------------------------------')
                 aux_pages[aux_page_count] = cur_aux_page
                 aux_page_count += 1
+
         for page in aux_pages:
             self.all_pages.append(aux_pages[page])
         self.add_pages_html(soup, aux_pages)
@@ -346,70 +355,7 @@ class ConfigurableBaseDiv(BaseDiv):
     def get_diff_auxiliary_pages(self, soup: BeautifulSoup):
         self.get_diff_chunks()
 
-        aux_page_count = 1
-        aux_pages = {}
-
-        # Get aux parition by page
-        page_aux_dict = defaultdict(list)
-        for aux_line in self.diff_auxiliary_partition_dict:
-            aux_part = AuxPartition(self.diff_auxiliary_partition_dict[aux_line], aux_line, self.line_page_dict[aux_line])
-            page_aux_dict[self.line_page_dict[aux_line]].append(aux_part)
-
-        # Go page by page, and generate aux pages
-        for page in self.pages:
-            # New table for each page
-            if page not in page_aux_dict:
-                # Leave the page empty
-                # highlight_table = self.generate_highlight_table(soup)
-                continue
-            else:
-                # Generate the aux page
-                aux_parts = page_aux_dict[page]
-                cur_base_page = self.pages[page]
-                cur_aux_page = Page(str(page) + '-a')
-                # Nothing in the sidebar
-                cur_aux_page.page_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_sidebar_line_nos = [' ' for i in range(len(cur_base_page.page_lnos))]
-                cur_aux_page.page_sidebar_code_lines = [' ' for i in range(len(cur_base_page.page_lnos))]
-                used_lines = set()
-                # print(page)
-                # For each partition - add to page if possible
-                for aPart in aux_parts:
-                    idx = cur_base_page.page_lnos.index(aPart.line)
-                    selected_lnos = cur_base_page.page_lnos[idx: (idx + aPart.partition.length)]
-                    # If the lengths match, and there aren't any conflicts then directly add
-                    if len(selected_lnos) == aPart.partition.length:
-                        selected_set = set(selected_lnos)
-                        if used_lines.isdisjoint(selected_set):
-                            used_lines = used_lines.union(selected_lnos)
-                            cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
-                            cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
-                        else:
-                            # Try moving it slightly up and check if it is possible to fit
-                            # min_line_no = min(used_lines.intersection(selected_set))
-                            # print(min_line_no)
-                            # print(selected_lnos)
-                            pass
-                    else:
-                        selected_lnos = cur_base_page.page_lnos[-aPart.partition.length:]
-                        idx = cur_base_page.page_lnos.index(selected_lnos[0])
-                        if used_lines.isdisjoint(set(selected_lnos)):
-                            used_lines = used_lines.union(selected_lnos)
-                            cur_aux_page.page_line_nos[idx:(idx + aPart.partition.length)] = [str(l) for l in aPart.partition.line_nos]
-                            cur_aux_page.page_code_lines[idx:(idx + aPart.partition.length)] = aPart.partition.format_code_lines
-                pass
-                # print(used_lines)
-                # print(cur_aux_page.page_line_nos)
-                # print(cur_aux_page.page_code_lines)
-                # print('------------------------------------------------')
-                aux_pages[aux_page_count] = cur_aux_page
-                aux_page_count += 1
-        
-        for page in aux_pages:
-            self.all_pages.append(aux_pages[page])
-        self.add_pages_html(soup, aux_pages)
-
+        self.get_augmenting_pages(self.diff_auxiliary_partition_dict, soup)
         # End of function
 
     def get_diff_chunks(self):
@@ -418,8 +364,10 @@ class ConfigurableBaseDiv(BaseDiv):
         
         base_all_lines = UtilMethods.text_from_file(self.code_file.file_path).splitlines()
         base_preformatted_lines = self.code_file.preformated_all_lines
+        base_line_wrap_length = self.code_file.line_wrap_length
         cmp_all_lines = UtilMethods.text_from_file(self.DiffFilePath).splitlines()
         cmp_preformatted_lines = UtilMethods.get_preformated_innerhtml('\n'.join(cmp_all_lines), self.code_file.language)
+        cmp_line_wrap_length = self.code_file.wrap_lines_process(cmp_all_lines, self.code_file.MAX_LINE_LENGTH)
         lno1 = 0
         lno2 = 0
         file_diff = difflib.ndiff(base_all_lines, cmp_all_lines)
@@ -441,7 +389,8 @@ class ConfigurableBaseDiv(BaseDiv):
                     base_line_nos = base_chunk
                     base_source_code_lines = list(map(lambda x: base_all_lines[x-1], base_line_nos))
                     base_format_code_lines = list(map(lambda x: self.get_diff_rem_line(base_preformatted_lines[x-1]), base_line_nos))
-                    base_code_part = CodePartition(base_line_nos, base_source_code_lines, base_format_code_lines, len(base_line_nos), Node)
+                    base_part_length = sum([base_line_wrap_length[l] for l in base_line_nos])
+                    base_code_part = CodePartition(base_line_nos, base_source_code_lines, base_format_code_lines, base_part_length, Node)
                     self.diff_auxiliary_partition_dict[self.get_nearest_base_line(base_align)] = base_code_part
                     base_chunk = []
                     base_align = None
@@ -449,7 +398,8 @@ class ConfigurableBaseDiv(BaseDiv):
                     cmp_line_nos = cmp_chunk
                     cmp_source_code_lines = list(map(lambda x: cmp_all_lines[x-1], cmp_line_nos))
                     cmp_format_code_lines = list(map(lambda x: self.get_diff_add_line(cmp_preformatted_lines[x-1]), cmp_line_nos))
-                    cmp_code_part = CodePartition(cmp_line_nos, cmp_source_code_lines, cmp_format_code_lines, len(cmp_line_nos), Node)
+                    cmp_part_length = sum([cmp_line_wrap_length[l] for l in cmp_line_nos])
+                    cmp_code_part = CodePartition(cmp_line_nos, cmp_source_code_lines, cmp_format_code_lines, cmp_part_length, Node)
                     self.diff_auxiliary_partition_dict[self.get_nearest_base_line(cmp_align)] = cmp_code_part
                     cmp_chunk = []
                     cmp_align = None
@@ -660,10 +610,10 @@ class ConfigurableBaseDiv(BaseDiv):
             
             # Add the comment partition
             commentPart = self.getCommentPartition(child)
-            if not(commentPart.base is None):
+            if not(commentPart.base is None):  # Comment should be included in the base
                 line_nos.extend(commentPart.base.line_nos)
                 source_code_lines.extend(commentPart.base.source_code_lines)
-            else:
+            else:   # Comment should be a sidebar
                 remaining_lines = len(line_nos) - len(sidebar_line_nos)
                 if remaining_lines > 0:
                     sidebar_line_nos.extend([' ' for i in range(remaining_lines)])

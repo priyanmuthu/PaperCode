@@ -29,8 +29,8 @@ class CodeFile:
         self.syntax_tree = None
         self.language = lang
         self.preformated_all_lines = UtilMethods.get_preformated_innerhtml('\n'.join(self.all_lines), self.language)
-        self.line_wrap_length = self.wrap_lines_process();
-        self.sidebar_line_wrap_length = self.wrap_sidebar_lines_process();
+        self.line_wrap_length = self.wrap_lines_process(self.all_lines, self.MAX_LINE_LENGTH);
+        self.sidebar_line_wrap_length = self.wrap_lines_process(self.all_lines, self.MAX_SIDEBAR_LINE_LENGTH)
         self.is_sort_topo_sort = True
     
     def all_lines_process(self):
@@ -38,21 +38,11 @@ class CodeFile:
             if self.all_lines[idx] == '':
                 self.all_lines[idx] = ' '
     
-    def wrap_lines_process(self):
-        wrapper = textwrap.TextWrapper(width=self.MAX_LINE_LENGTH)
+    def wrap_lines_process(self, all_lines, max_width):
+        wrapper = textwrap.TextWrapper(width=max_width)
         line_len = {}
-        for idx in range(len(self.all_lines)):
-            line_len[idx+1] = max(len(wrapper.wrap(self.all_lines[idx])), 1)
-        
-        return line_len
-        # End of func
-    
-    def wrap_sidebar_lines_process(self):
-        wrapper = textwrap.TextWrapper(width=self.MAX_SIDEBAR_LINE_LENGTH)
-        line_len = {}
-        for idx in range(len(self.all_lines)):
-            line_len[idx+1] = max(len(wrapper.wrap(self.all_lines[idx])), 1)
-        
+        for idx in range(len(all_lines)):
+            line_len[idx+1] = max(len(wrapper.wrap(all_lines[idx])), 1)
         return line_len
         # End of func
 
