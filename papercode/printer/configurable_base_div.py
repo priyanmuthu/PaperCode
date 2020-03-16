@@ -203,6 +203,32 @@ class ConfigurableBaseDiv(BaseDiv):
             highlight_table, sidebar_table = self.setup_page(soup)
 
             cur_page: Page = pages[page]
+
+            # Generate QR-Code and header/footer elements
+            qr_td_1 = soup.new_tag('td')
+            qr_td_1['style'] = "position:relative;"
+
+            qr_td_2 = soup.new_tag('td')
+            qr_td_2['style'] = "position:relative;"
+
+            qr_td_3 = soup.new_tag('td')
+            qr_td_3['style'] = "position:relative;"
+            qrcode = soup.new_tag('img')
+            qrcode['class'] = ['qrcode']
+            qrcode_binary = UtilMethods.getQRCodeFromData(cur_page.page_no)
+            qrcode_str = "data:image/png;base64," + qrcode_binary
+            qrcode['src'] = qrcode_str
+            qr_td_3.append(qrcode)
+
+            qr_td_4 = soup.new_tag('td')
+            qr_td_4['style'] = "position:relative;"
+            
+            qr_table_row = soup.new_tag('tr')
+            qr_table_row.append(qr_td_1)
+            qr_table_row.append(qr_td_2)
+            qr_table_row.append(qr_td_3)
+            qr_table_row.append(qr_td_4)
+            highlight_table.append(qr_table_row)
             
             for idx in range(len(cur_page.page_line_nos)):
                 # new table row for each line
@@ -270,9 +296,9 @@ class ConfigurableBaseDiv(BaseDiv):
         return side_table
 
     def get_auxiliary_pages(self, soup: BeautifulSoup):
-        self.get_augmenting_pages(self.auxiliary_partition_dict, soup)
+        self.get_augmenting_pages(self.auxiliary_partition_dict, soup, True)
 
-    def get_augmenting_pages(self, augment_page_dict: dict, soup: BeautifulSoup):
+    def get_augmenting_pages(self, augment_page_dict: dict, soup: BeautifulSoup, isAux: bool = True):
         # Generate auxiliary pages using info from the existing pages.
         aux_page_count = 1
         aux_pages = {}
@@ -299,7 +325,12 @@ class ConfigurableBaseDiv(BaseDiv):
                 # Generate the aux page
                 aux_parts = page_aux_dict[page]
                 cur_base_page = self.pages[page]
-                cur_aux_page = Page(str(page) + '-a')
+                page_no_str = str(page)
+                if isAux:
+                    page_no_str = str(page) + '-a'
+                else:
+                    page_no_str = str(page) + '-d'
+                cur_aux_page = Page(page_no_str)
                 # Nothing in the sidebar
                 cur_aux_page.page_lnos = [i for i in range(cur_base_page.page_length)]
                 cur_aux_page.page_line_nos = [' ' for i in range(cur_base_page.page_length)]
@@ -355,10 +386,12 @@ class ConfigurableBaseDiv(BaseDiv):
     def get_diff_auxiliary_pages(self, soup: BeautifulSoup):
         self.get_diff_chunks()
 
-        self.get_augmenting_pages(self.diff_auxiliary_partition_dict, soup)
+        self.get_augmenting_pages(self.diff_auxiliary_partition_dict, soup, False)
         # End of function
 
     def get_diff_chunks(self):
+        # https://stackoverflow.com/questions/9505822/getting-line-numbers-that-were-changed
+        # + for add - for delete maybe use ? ??
         if not self.DiffInAuxiliary:
             return
         

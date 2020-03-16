@@ -4,9 +4,10 @@ from papercode.printer.code_file import CodeFile
 from papercode.printer.code_printer import CodePrinter
 from papercode.printer.base_div import BaseDiv
 from papercode.printer.sidebar_div import SidebarDiv
+from papercode.printer.configurable_base_div import ConfigurableBaseDiv
 
 class ConfigurableCodePrinter(CodePrinter):
-    def __init__(self, pdf_file_path: str, code_file: CodeFile, base_div: BaseDiv, sidebar_div: SidebarDiv):
+    def __init__(self, pdf_file_path: str, code_file: CodeFile, base_div: ConfigurableBaseDiv, sidebar_div: SidebarDiv):
         super().__init__(pdf_file_path, code_file)
         self.paper = print_paper['A4P']
         self.size_limit = 3
@@ -22,8 +23,7 @@ class ConfigurableCodePrinter(CodePrinter):
         self.base_div.generate_html(soup, self.paper)
         self.base_div.get_auxiliary_pages(soup)
         self.base_div.get_diff_auxiliary_pages(soup)
-        if self.sidebar_div is not None:
-            self.sidebar_div.generate_html(soup)
+
         return str(soup)
 
     def print_code_file(self):

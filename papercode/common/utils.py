@@ -6,6 +6,9 @@ import asyncio
 import sys
 import os.path
 import enum
+import qrcode
+from io import BytesIO
+import base64
 
 class Language(enum.Enum):
     Python = 1
@@ -18,7 +21,7 @@ class Paper:
         self.template_path = template_path
 
 print_paper = {
-    'A4P': Paper('A4', 90, 'papercode/templates/sidebar_portrait.html'),
+    'A4P': Paper('A4', 85, 'papercode/templates/sidebar_portrait.html'),
     'A4L': Paper('A4', 50, 'papercode/templates/sidebar_landscape.html'),
 }
 
@@ -104,8 +107,9 @@ class UtilMethods:
             'printBackground': True,
             'displayHeaderFooter': True,
             'scale': 0.8,
-            'margin': { 'top': "1cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" }
+            'margin': { 'top': "2cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" },
         })
+        # 'headerTemplate': '<header style="margin: auto; width: 40%"><img style="float: right; marginTop: 30px; marginRight: 20px; marginLeft: 8px; width: 25%; z-index: 10;" src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAH0AAAB9AQAAAACn+1GIAAABI0lEQVR4nK2UMWrDQBRE3/cK1p18g/VJJHIvgRSce+QokfBFVgcIbDoJZE0KFYGQyvm/nOLBnxkGgBR3SBoBTvy6Z4QobayhACbJB8pkA/q4AHzZ1QkKgGmY/8v4uepgUn+++0GJ0pbiXg8pTm6ermYV3OcNZGY+UEnK6AJLK2lxgdqJ1+v6ogozG+azV/phWiBMUFdeQe10SXutDJB8oEDIS6tbjpNuPp6inS7REORXKTQSMm3ps8Za2el9KxBVgFaDk6faCZmGDhqCk6c09YakIQF99im/phJ0hsOD5FJ+ANJCLcWp9E6DEqWNs5W3mQZmz+V/2MBql2cZfwv30rG05XH1ST+OdIm2QNwJTuU/ln+kS3Gkd9rTY/lbVWCqcKnUN41SkTzCxZb8AAAAAElFTkSuQmCC" alt="Pivohub" /></header>'
         await browser.close()
 
     @staticmethod
@@ -145,3 +149,19 @@ class UtilMethods:
         line_soup = soup.new_tag('pre')
         line_soup.string = '' + '\n'.join(str(lno) for lno in partition['line_nos'])
         return line_soup, str(code_preformated_text)
+    
+    @staticmethod
+    def getQRCodeFromData(data: str):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=5,
+            border=0,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8") 
+        return img_str
