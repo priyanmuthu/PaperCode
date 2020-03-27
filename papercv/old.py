@@ -26,3 +26,23 @@ def cognitive_service(image_body: str):
 		conn.close()
 	except Exception as e:
 		print("[Errno {0}] {1}".format(e.errno, e.strerror))
+
+
+def find_line_nos(image):
+	
+	gray = dilate_image(image)
+	
+	# ret, thresh = cv2.threshold(gray,80,255,cv2.THRESH_BINARY_INV)
+	# ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+	# edges = cv2.Canny(gray,50,150,apertureSize = 3)
+	# norm_image = cv2.normalize(gray, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+	# norm_image = cv2.equalizeHist(gray)
+	# sobelx = cv2.Sobel(gray,cv2.CV_64F,1,0,ksize=5)
+	# sobely = cv2.Sobel(gray,cv2.CV_64F,0,1,ksize=5)
+	print('showing image')
+	cv2.imshow("test1", gray)
+	# cv2.imshow("tes	t1", edges)
+	# cv2.imshow("test2", norm_image)
+	# cv2.imshow("test1", sobelx)
+	# cv2.imshow("test2", sobely)
+	cv2.waitKey(0)
