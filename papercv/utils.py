@@ -6,14 +6,17 @@ frame = None
 def mouseRGB(event,x,y,flags,param):
     if event == cv2.EVENT_LBUTTONDOWN: #checks mouse left button down condition
         global frame
-        colorsB = frame[y,x,0]
-        colorsG = frame[y,x,1]
-        colorsR = frame[y,x,2]
-        colors = frame[y,x]
-        print("Red: ",colorsR)
-        print("Green: ",colorsG)
-        print("Blue: ",colorsB)
-        print("BRG Format: ",colors)
+        if len(frame.shape) == 2:
+            print('Grascale value: ', frame[y,x])
+        else:
+            colorsB = frame[y,x,0]
+            colorsG = frame[y,x,1]
+            colorsR = frame[y,x,2]
+            colors = frame[y,x]
+            print("Red: ",colorsR)
+            print("Green: ",colorsG)
+            print("Blue: ",colorsB)
+            print("BRG Format: ",colors)
         print("Coordinates of pixel: X: ",x,"Y: ",y)
 
 def get_RGB_mouse_click(image):

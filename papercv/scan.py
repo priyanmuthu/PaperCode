@@ -10,6 +10,8 @@ import http.client, urllib.request, urllib.parse, urllib.error, base64
 from papercv.swt import SWTScrubber
 from papercv.utils import get_RGB_mouse_click
 from papercv.table import find_table_from_image, pre_process_image
+from skimage.filters import threshold_otsu, threshold_niblack, threshold_sauvola
+import matplotlib.pyplot as plt
 
 def increase_image_brigtness(img, value):
 	hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -83,17 +85,30 @@ def scan_page_from_image(image):
 	return warped
 
 def image_diff(image1, image2):
+
+	image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+	image2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+	image1 = denoise(image1)
+	image2 = denoise(image2)
+
+	# resize
+	image2 = cv2.resize(image2, (image1.shape[1], image1.shape[0]))
+	# cv2.imshow("diff", image1)
+	# cv2.imshow("diff2", image2)
+	# cv2.waitKey(0)
+	# return
+
 	diff = cv2.absdiff(image2, image1)
 	# diff = cv2.absdiff(image1, image2)
-	mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-
-	th = 1
-	imask =  mask>th
-
-	canvas = np.zeros_like(image2, np.uint8)
-	canvas[imask] = image2[imask]
+	
+	# diff = cv2.absdiff(image1, image2)
+	# mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+	res, thresh = cv2.threshold(diff, 150, 255, cv2.THRESH_BINARY)
 	cv2.imshow("diff", diff)
+	cv2.imshow("thresh", thresh)
 	cv2.waitKey(0)
+
+	# get_RGB_mouse_click(diff)
 	# cv2.imwrite("result.png", canvas)
 
 def process_image(image_path: str):
@@ -138,6 +153,63 @@ def dilate_image(img, morph_size=(8, 8)):
 	pre = ~cpy
 	return pre
 
+def text_segment(image):
+	#grayscale
+	gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+	cv2.imshow('gray',gray)
+	cv2.waitKey(0)
+
+	#binary
+	# ret,thresh = cv2.threshold(gray,127,255,cv2.THRESH_BINARY_INV)
+	thresh = sauvola(gray)
+	cv2.imshow('second',thresh)
+	cv2.waitKey(0)
+
+	#dilation
+	kernel = np.ones((5,5), np.uint8)
+	img_dilation = cv2.dilate(thresh, kernel, iterations=1)
+	cv2.imshow('dilated',img_dilation)
+	cv2.waitKey(0)
+
+	#find contours
+	ctrs, hier = cv2.findContours(img_dilation.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+	#sort contours
+	sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
+
+	for i, ctr in enumerate(sorted_ctrs):
+		# Get bounding box
+		x, y, w, h = cv2.boundingRect(ctr)
+
+		# Getting ROI
+		roi = image[y:y+h, x:x+w]
+
+		# show ROI
+		cv2.rectangle(image,(x,y),( x + w, y + h ),(90,0,255),2)
+		# cv2.imshow('segment no:'+str(i),roi)
+		# cv2.waitKey(0)
+
+	cv2.imshow('marked areas',image)
+	cv2.waitKey(0)
+
+def sauvola(image):
+	# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	# threshImage = threshold_niblack(image, 25)
+	threshImage = threshold_sauvola(image, 25)
+	binary_sauvola = image < threshImage
+
+	binary_sauvola = binary_sauvola.astype(np.uint8)  #convert to an unsigned byte
+	binary_sauvola*=255
+
+	# plt.figure(figsize=(8, 7))
+	# plt.subplot(2, 2, 4)
+	# plt.imshow(binary_sauvola, cmap=plt.cm.gray)
+	# plt.title('Sauvola Threshold')
+	# plt.axis('off')
+	# plt.show()
+	# denoise(binary_sauvola)
+	return binary_sauvola
+
 def run():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-i", "--image", required = True,
@@ -145,9 +217,16 @@ def run():
 	args = vars(ap.parse_args())
 	image_path = args["image"]
 
+	im1 = cv2.imread(image_path)
+	im2 = cv2.imread('./papercv/test/pup2.jpg')
+
 	pImage = process_image(image_path)
-	# vis_image = find_table_from_image(pImage)
+	text_segment(pImage)
+
+	# image_diff(pImage, im2)
+
+	# # vis_image = find_table_from_image(pImage)
 	# cv2.imshow('test', vis_image)
 	# cv2.waitKey(0)
-	find_line_nos(pImage)
-	# get_RGB_mouse_click(pImage)
+	# find_line_nos(pImage)
+	# # get_RGB_mouse_click(pImage)
