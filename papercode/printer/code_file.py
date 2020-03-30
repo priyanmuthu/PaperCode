@@ -105,7 +105,7 @@ class PyCodeFile(CodeFile):
     def generate_syntax_tree(self):
         p = parser.Parser()
         wrapper = p.parse_module_with_metadata(self.source_code)
-        svisitor = structure_visitor.StructureVisitor(wrapper)
+        svisitor = structure_visitor.StructureVisitor(wrapper, self.all_lines)
         wrapper.visit(svisitor)
         self.syntax_tree = svisitor.syntax_tree
     

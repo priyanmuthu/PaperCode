@@ -6,10 +6,11 @@ class StructureVisitor(libcst.CSTTransformer):
     METADATA_DEPENDENCIES = (libcst.metadata.PositionProvider, libcst.metadata.QualifiedNameProvider,)
     count = 0
 
-    def __init__(self, wrapper):
+    def __init__(self, wrapper, all_lines):
         self.wrapper = wrapper
         self.module = self.wrapper.module
         self.lparser = Parser()
+        self.all_lines = all_lines
         
 
     def visit_Module(self, node: libcst.Module):
@@ -17,6 +18,7 @@ class StructureVisitor(libcst.CSTTransformer):
         module_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
         self.syntax_tree = Node(self.module, module_start_position, module_end_position, None)
         self.current_parent_node = self.syntax_tree
+        self.prev_comment = None
 
     def visit_ClassDef(self, node: libcst.ClassDef):
         class_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
@@ -81,3 +83,25 @@ class StructureVisitor(libcst.CSTTransformer):
         else:
             self.current_parent_node.children.append(call_node)
         return False
+    
+    def visit_Comment(self, node):
+        comment_start_position = self.get_metadata(libcst.metadata.PositionProvider, node).start
+        comment_end_position = self.get_metadata(libcst.metadata.PositionProvider, node).end
+        comment_line = self.all_lines[comment_start_position.line - 1].strip()
+        if comment_start_position.line == comment_end_position.line and comment_line[0] != '#':
+            return True
+        
+        # Check if the previous comment is a line before this
+        if not (self.prev_comment is None) and self.prev_comment.end_pos.line == (comment_start_position.line - 1):
+            # append to the prev comment
+            self.prev_comment.end_pos = comment_end_position
+            return True
+        
+        comment_node = CommentNode(
+            node, 
+            self.current_parent_node, 
+            comment_start_position, 
+            comment_end_position)
+        self.current_parent_node.children.append(comment_node)
+        self.prev_comment = comment_node
+        return True

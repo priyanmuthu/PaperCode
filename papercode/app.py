@@ -10,8 +10,8 @@ from os.path import abspath
 import difflib
 
 def run():
-    # runpy()
-    runts()
+    runpy()
+    # runts()
 
 
 def runts():
@@ -33,20 +33,15 @@ def runts():
 
 def runpy():
     # file_path = 'papercode/temp/temp.py'
-    # file_path = 'papercode/temp/temp2.py'
-    html_path = 'papercode/temp/high.html'
-    file_path = 'papercode/temp/fpdf.py'
-    # file_path = 'D:/PV/Research/PaperCode/papertsc/temp/project1/pytutor.ts'
+    # file_path = abspath('papercode/temp/temp2.py')
+    file_path = abspath('papercode/temp/fpdf.py')
+    html_path = abspath('papercode/temp/high3.html')
     # template_path = 'papercode/templates/template2.html'
     pdf_file_path = 'papercode/temp/pup.pdf'
     code_file = PyCodeFile(file_path)
     code_file.process()
     # code_file.print_tree(code_file.syntax_tree)
     base_div = ConfigurableBaseDiv(code_file)
-    # base_div = EverythingBaseDiv(code_file)
-    # sidebar_div = SmallFunctionSidebarDiv(base_div, code_file, 3)
-    # base_div = BigFunctionBaseDiv(code_file)
-    # sidebar_div = ReferencesSidebarDiv(base_div, code_file, 3)
     sidebar_div = None
     # code_printer = SidebarCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
     code_printer = ConfigurableCodePrinter(pdf_file_path, code_file, base_div, sidebar_div)
