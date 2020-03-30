@@ -95,6 +95,7 @@ class StructureVisitor(libcst.CSTTransformer):
         if not (self.prev_comment is None) and self.prev_comment.end_pos.line == (comment_start_position.line - 1):
             # append to the prev comment
             self.prev_comment.end_pos = comment_end_position
+            self.prev_comment.size = self.prev_comment.end_pos.line - self.prev_comment.start_pos.line + 1
             return True
         
         comment_node = CommentNode(

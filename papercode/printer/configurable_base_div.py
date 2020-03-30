@@ -268,7 +268,7 @@ class ConfigurableBaseDiv(BaseDiv):
         # side_table = self.generate_sidebar_table(soup)
         for i in range(len(sidebar_line_nos)):
             line_str = '<pre>' + str(sidebar_line_nos[i]) + '</pre>'
-            code_str = '<pre>' + sidebar_code_lines[i] + '</pre>'
+            code_str = '<pre>' + sidebar_code_lines[i].strip() + '</pre>'
                 
             # Generating the table row
             line_no_div = soup.new_tag('div')
