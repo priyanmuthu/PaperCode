@@ -115,6 +115,7 @@ class ConfigurableBaseDiv(BaseDiv):
 
         # Create partition node dict
         line_count = 0
+        sidebar_line_count = 0
         max_lines = paper.max_lines
         
         # Manual page split
@@ -131,6 +132,7 @@ class ConfigurableBaseDiv(BaseDiv):
                 current_page.process_sidebar()
                 page_count += 1
                 line_count = 0
+                sidebar_line_count = 0
                 current_page = Page(str(page_count))
             lnos = p.base.line_nos
             line_nos = [self.get_line_no_str(lno) for lno in p.base.line_nos]
@@ -155,6 +157,7 @@ class ConfigurableBaseDiv(BaseDiv):
                     self.pages[page_count] = current_page
                     page_count += 1
                     line_count = 0
+                    sidebar_line_count = 0
                     current_page = Page(str(page_count))
                 
                 self.line_page_dict[lnos[i]] = page_count
@@ -163,13 +166,17 @@ class ConfigurableBaseDiv(BaseDiv):
                 current_page.page_line_nos.append(line_nos[i])
                 current_page.page_code_lines.append(code_lines[i])
                 # Todo: wrap text modifications
-                if sidebar_line_nos and sidebar_code_lines and i < sidebar_length:
-                    current_page.sidebar_line_dict[line_count] = sidebar_line_nos[i]
-                    current_page.sidebar_code_dict[line_count] = sidebar_code_lines[i]
+                if sidebar_line_nos and sidebar_code_lines and i < sidebar_length and sidebar_line_count <= max_lines:
+                    if sidebar_line_count < line_count:
+                        sidebar_line_count = line_count
+                    current_page.sidebar_line_dict[sidebar_line_count] = sidebar_line_nos[i]
+                    current_page.sidebar_code_dict[sidebar_line_count] = sidebar_code_lines[i]
                     if type(sidebar_line_nos[i]) is str:
-                        current_page.sidebar_wrap_dict[line_count] = 1
+                        current_page.sidebar_wrap_dict[sidebar_line_count] = 1
+                        sidebar_line_count += 1
                     else:
-                        current_page.sidebar_wrap_dict[line_count] = self.code_file.sidebar_line_wrap_length[sidebar_line_nos[i]]
+                        current_page.sidebar_wrap_dict[sidebar_line_count] = self.code_file.sidebar_line_wrap_length[sidebar_line_nos[i]]
+                        sidebar_line_count += self.code_file.sidebar_line_wrap_length[sidebar_line_nos[i]]
 
                     # current_page.page_sidebar_line_nos.append(sidebar_line_nos[i])
                     # current_page.page_sidebar_code_lines.append(sidebar_code_lines[i])
@@ -185,6 +192,7 @@ class ConfigurableBaseDiv(BaseDiv):
             current_page.process_sidebar()
             page_count += 1
             line_count = 0
+            sidebar_line_count = 0
             current_page = Page(str(page_count))
         for page in self.pages:
             self.all_pages.append(self.pages[page])

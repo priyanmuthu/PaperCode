@@ -10,8 +10,8 @@ from os.path import abspath
 import difflib
 
 def run():
-    runpy()
-    # runts()
+    # runpy()
+    runts()
 
 
 def runts():
