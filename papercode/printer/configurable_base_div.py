@@ -8,6 +8,7 @@ from os.path import abspath
 import difflib
 import uuid
 import textwrap
+import shortuuid
 
 class PagePartition:
     def __init__(self, base: CodePartition = None, node: Node = None, sidebar: CodePartition = None):
@@ -62,6 +63,7 @@ class ConfigurableBaseDiv(BaseDiv):
         self.PushCommentsInFunction = True
         self.RemoveEmptyLines = True
         self.BoldFunctionStartLine = True
+        self.uuid = shortuuid.uuid()
 
         # Auxiliary page with info
         self.LargeCommentsInAuxiliary = True
@@ -199,36 +201,9 @@ class ConfigurableBaseDiv(BaseDiv):
     def add_pages_html(self, soup: BeautifulSoup, pages: dict):
         # Generate a table for each page
         for page in pages:
-            # highlight_table = self.generate_highlight_table(soup)
-            highlight_table, sidebar_table = self.setup_page(soup)
-
             cur_page: Page = pages[page]
-
-            # Generate QR-Code and header/footer elements
-            qr_td_1 = soup.new_tag('td')
-            qr_td_1['style'] = "position:relative;"
-
-            qr_td_2 = soup.new_tag('td')
-            qr_td_2['style'] = "position:relative;"
-
-            qr_td_3 = soup.new_tag('td')
-            qr_td_3['style'] = "position:relative;"
-            qrcode = soup.new_tag('img')
-            qrcode['class'] = ['qrcode']
-            qrcode_binary = UtilMethods.getQRCodeFromData(cur_page.page_no)
-            qrcode_str = "data:image/png;base64," + qrcode_binary
-            qrcode['src'] = qrcode_str
-            qr_td_3.append(qrcode)
-
-            qr_td_4 = soup.new_tag('td')
-            qr_td_4['style'] = "position:relative;"
-            
-            qr_table_row = soup.new_tag('tr')
-            qr_table_row.append(qr_td_1)
-            qr_table_row.append(qr_td_2)
-            qr_table_row.append(qr_td_3)
-            qr_table_row.append(qr_td_4)
-            highlight_table.append(qr_table_row)
+            # highlight_table = self.generate_highlight_table(soup)
+            highlight_table, sidebar_table = self.setup_page(soup, cur_page.page_no)
             
             for idx in range(len(cur_page.page_line_nos)):
                 # new table row for each line
@@ -510,12 +485,35 @@ class ConfigurableBaseDiv(BaseDiv):
                     func_sidebar.format_code_lines[i] = call_locs[lno]
         return partitions
 
-    def setup_page(self, soup: BeautifulSoup):
+    def setup_page(self, soup: BeautifulSoup, page_no: int):
         html_body = soup.find('body')
+
+        page_div = soup.new_tag('div')
+        page_div['class'] = ['pagediv']
+        html_body.append(page_div)
+
+        header_div = soup.new_tag('div')
+        header_div['class'] = ['pageheader']
+        page_div.append(header_div)
+
+        # Append qrcode
+        qrdiv = soup.new_tag('div')
+        qrdiv['style'] = 'position:relative; width: 100%'
+        qrcode = soup.new_tag('img')
+        qrcode['class'] = ['qrcode']
+        qrcode_binary = UtilMethods.getQRCodeFromData( self.uuid + '$' + page_no)
+        qrcode_str = "data:image/png;base64," + qrcode_binary
+        qrcode['src'] = qrcode_str
+        qrdiv.append(qrcode)
+        header_div.append(qrdiv)
+
+        #setup header
+        header_table = self.setup_header(soup, page_no)
+        header_div.append(header_table)
 
         container_div = soup.new_tag('div')
         container_div['class'] = ['container']
-        html_body.append(container_div)
+        page_div.append(container_div)
 
         left_div = soup.new_tag('div')
         left_div['class'] = ['leftdiv']
@@ -537,6 +535,26 @@ class ConfigurableBaseDiv(BaseDiv):
 
         return base_table, side_table
 
+    def setup_header(self, soup: BeautifulSoup, page_no: int):
+        header_table = soup.new_tag('table')
+        header_table['class'] = ['headertable']
+
+        left_table_data = soup.new_tag('td')
+        left_table_data['style'] = 'position:relative;';
+        
+        center_table_data = soup.new_tag('td')
+        center_table_data['style'] = 'position:relative;';
+        
+        right_table_data = soup.new_tag('td')
+        right_table_data['style'] = 'position:relative;';
+
+        table_row = soup.new_tag('tr')
+        table_row.append(left_table_data)
+        table_row.append(center_table_data)
+        table_row.append(right_table_data)
+        header_table.append(table_row)
+
+        return header_table
 
     def generate_highlight_table(self, soup: BeautifulSoup):
         # html_body = soup.find('body')

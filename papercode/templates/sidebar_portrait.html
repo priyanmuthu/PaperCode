@@ -20,10 +20,12 @@ Licensed under the BSD license, see LICENSE for details.
 @page {
   size: A4 portrait;
 }
-
+.pagediv{
+  page-break-after: always;
+}
 .container{
     display: flex;
-    page-break-after: always;
+    /* page-break-after: always; */
 }
 .leftdiv{
     width: 700px;
@@ -35,6 +37,14 @@ table{
   table-layout: fixed;
   margin: 0px;
 }
+table.headertable{
+  table-layout: fixed;
+  margin: 0px;
+  width: 100%;
+}
+.pageheader{
+  display: flex;
+}
 body .highlighttable {page-break-after: always;}
 td.linenos { background-color: #f0f0f0; padding-left: 5px; padding-right: 5px; text-align: right; }
 span.boldlinenos {background-color:darkgray;}
@@ -43,7 +53,7 @@ tr {vertical-align: top; padding-bottom: 5px;}
 span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
 span.diffadd {background-color:#00FF00;}
 span.diffrem {background-color:#FFCDD2;}
-img.qrcode {width: 100px; height: 100px; position:absolute; left: 200px; top: 10px;}
+img.qrcode {width: 100px; height: 100px; position:absolute; left: 900px; top: 10px;}
 pre { line-height: 125%; margin: 0px; white-space:pre-wrap; overflow: hidden; max-width: 700px;}
 .highlight pre {min-width: 700px;}
 .sidecode pre { max-width: 400px; min-width: 400px;}

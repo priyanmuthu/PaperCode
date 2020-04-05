@@ -105,7 +105,7 @@ class UtilMethods:
             # 'format': 'A4',
             'preferCSSPageSize': True,
             'printBackground': True,
-            'displayHeaderFooter': True,
+            'displayHeaderFooter': False,
             'scale': 0.8,
             'margin': { 'top': "2cm", 'bottom': "1cm", 'left': "1cm", 'right': "1cm" },
         })
