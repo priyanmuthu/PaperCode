@@ -4,7 +4,7 @@ from papercode.language.node import Node, ClassNode, FunctionNode, CallNode, Int
 from papercode.printer.code_file import CodeFile, CodePartition
 from bs4 import BeautifulSoup
 from collections import defaultdict
-from os.path import abspath
+from os.path import abspath, basename
 import difflib
 import uuid
 import textwrap
@@ -28,6 +28,7 @@ class Page:
         self.sidebar_line_dict = {}
         self.sidebar_code_dict = {}
         self.sidebar_wrap_dict = {}
+        self.classname = None
     
     def process_sidebar(self):
         cur_line = 0
@@ -42,7 +43,7 @@ class Page:
                 self.page_sidebar_line_nos.append(' ')
                 self.page_sidebar_code_lines.append(' ')
                 cur_line += 1
-        pass
+        # end of func
 
 class AuxPartition:
     def __init__(self, partition: CodePartition, line: int, page: int):
@@ -134,6 +135,15 @@ class ConfigurableBaseDiv(BaseDiv):
                 page_count += 1
                 line_count = 0
                 current_page = Page(str(page_count))
+            
+
+            if not(p.node is None) and current_page.classname is None:
+                if type(p.node) == ClassNode:
+                    current_page.classname = p.node.name
+                elif type(p.node) == FunctionNode and type(p.node.parent_node) == ClassNode:
+                    current_page.classname = p.node.parent_node.name
+
+
             lnos = p.base.line_nos
             line_nos = [self.get_line_no_str(lno) for lno in p.base.line_nos]
             code_lines = p.base.format_code_lines
@@ -154,10 +164,13 @@ class ConfigurableBaseDiv(BaseDiv):
                 if (line_count + line_length) > max_lines:
                     current_page.page_length = line_count
                     current_page.process_sidebar()
+                    prev_classname = current_page.classname
                     self.pages[page_count] = current_page
                     page_count += 1
                     line_count = 0
                     current_page = Page(str(page_count))
+                    current_page.classname = prev_classname
+                    
                 
                 self.line_page_dict[lnos[i]] = page_count
                 self.code_page_line_dict[lnos[i]] = line_count
@@ -203,7 +216,7 @@ class ConfigurableBaseDiv(BaseDiv):
         for page in pages:
             cur_page: Page = pages[page]
             # highlight_table = self.generate_highlight_table(soup)
-            highlight_table, sidebar_table = self.setup_page(soup, cur_page.page_no)
+            highlight_table, sidebar_table = self.setup_page(soup, cur_page)
             
             for idx in range(len(cur_page.page_line_nos)):
                 # new table row for each line
@@ -485,30 +498,30 @@ class ConfigurableBaseDiv(BaseDiv):
                     func_sidebar.format_code_lines[i] = call_locs[lno]
         return partitions
 
-    def setup_page(self, soup: BeautifulSoup, page_no: int):
+    def setup_page(self, soup: BeautifulSoup, cur_page: Page):
         html_body = soup.find('body')
 
         page_div = soup.new_tag('div')
         page_div['class'] = ['pagediv']
         html_body.append(page_div)
 
-        header_div = soup.new_tag('div')
-        header_div['class'] = ['pageheader']
-        page_div.append(header_div)
-
         # Append qrcode
         qrdiv = soup.new_tag('div')
         qrdiv['style'] = 'position:relative; width: 100%'
         qrcode = soup.new_tag('img')
         qrcode['class'] = ['qrcode']
-        qrcode_binary = UtilMethods.getQRCodeFromData( self.uuid + '$' + page_no)
+        qrcode_binary = UtilMethods.getQRCodeFromData( self.uuid + '$' + cur_page.page_no)
         qrcode_str = "data:image/png;base64," + qrcode_binary
         qrcode['src'] = qrcode_str
         qrdiv.append(qrcode)
-        header_div.append(qrdiv)
+        page_div.append(qrdiv)
+
+        header_div = soup.new_tag('div')
+        header_div['class'] = ['pageheader']
+        page_div.append(header_div)
 
         #setup header
-        header_table = self.setup_header(soup, page_no)
+        header_table = self.setup_header(soup, cur_page)
         header_div.append(header_table)
 
         container_div = soup.new_tag('div')
@@ -535,18 +548,22 @@ class ConfigurableBaseDiv(BaseDiv):
 
         return base_table, side_table
 
-    def setup_header(self, soup: BeautifulSoup, page_no: int):
+    def setup_header(self, soup: BeautifulSoup, cur_page: Page):
         header_table = soup.new_tag('table')
         header_table['class'] = ['headertable']
 
         left_table_data = soup.new_tag('td')
-        left_table_data['style'] = 'position:relative;';
         
         center_table_data = soup.new_tag('td')
-        center_table_data['style'] = 'position:relative;';
+        center_text = basename(self.code_file.file_path)
+        if not(cur_page.classname is None):
+            center_text = center_text + '  (' + cur_page.classname + ')'
+        center_table_data.insert(0, center_text)
+        center_table_data['style'] = 'text-align:center'
         
         right_table_data = soup.new_tag('td')
-        right_table_data['style'] = 'position:relative;';
+        right_table_data.insert(0, '' + str(cur_page.page_no) + '/' + str(len(self.all_pages)))
+        right_table_data['style'] = 'text-align:right'
 
         table_row = soup.new_tag('tr')
         table_row.append(left_table_data)
