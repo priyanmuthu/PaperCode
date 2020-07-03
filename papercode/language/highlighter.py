@@ -1,6 +1,6 @@
 import pygments
 from pygments import lexers, formatters, styles
-from pygments.lexers import PythonLexer
+from pygments.lexers import PythonLexer, SLexer
 from pygments.formatters import HtmlFormatter
 from pygments.lexers.javascript import TypeScriptLexer
 
@@ -12,8 +12,14 @@ class Highlighter:
                 style=style,
                 full=True))
     
-    def highlight_ts_file(self, python_code, linenos=True, style='default'):
-        return pygments.highlight(python_code, TypeScriptLexer(), HtmlFormatter(
+    def highlight_ts_file(self, ts_code, linenos=True, style='default'):
+        return pygments.highlight(ts_code, TypeScriptLexer(), HtmlFormatter(
+                linenos='table',
+                style=style,
+                full=True))
+    
+    def highlight_r_file(self, r_code, linenos=True, style='default'):
+        return pygments.highlight(r_code, SLexer(), HtmlFormatter(
                 linenos='table',
                 style=style,
                 full=True))

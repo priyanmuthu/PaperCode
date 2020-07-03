@@ -394,3 +394,20 @@ class TsCodeFile(CodeFile):
                     partitions.append(self.get_partition(tnode.start_pos.line, tnode.end_pos.line, FunctionNode))
             
         return partitions
+
+
+class RCodeFile(CodeFile):
+    def __init__(self, file_path, project_path=None):
+        super().__init__(file_path, project_path=project_path, lang=Language.R)
+    
+    def process(self):
+        # Generate syntax tree
+        self.generate_syntax_tree()
+        pass
+
+    def generate_syntax_tree(self):
+        self.create_node()
+        pass
+
+    def create_node(self):
+        pass

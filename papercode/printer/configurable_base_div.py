@@ -709,6 +709,7 @@ class ConfigurableBaseDiv(BaseDiv):
         
         sidebar_length = len(sidebar_line_nos)
 
+        # use preformated_all_lines in this
         sidebar_part = CodePartition(
             sidebar_line_nos, 
             sidebar_code, 
@@ -717,6 +718,7 @@ class ConfigurableBaseDiv(BaseDiv):
             CommentNode
         )
 
+        # use preformated_all_lines in this
         base_part = CodePartition(
             line_nos, 
             source_code_lines, 
@@ -784,36 +786,3 @@ class ConfigurableBaseDiv(BaseDiv):
         if (cur_sidebar):
             res_partition.append(PagePartition(cur_sidebar.sidebar, cur_sidebar.node))
         return res_partition
-    
-    def get_table_for_sidebar(self, soup, partitions):
-        side_table = soup.new_tag('table')
-        side_table['class'] = ['sidebartable']
-        side_table['cellspacing'] = "0"
-        for p in partitions:
-            _, pcode = UtilMethods.get_pre_formated_text(p, self.code_file.language)
-            line_str = '<pre>' + '\n'.join(str(lno) for lno in p.line_nos) + '</pre>'
-            
-            # Generating the table row
-            line_no_div = soup.new_tag('div')
-            line_no_div['class'] = ['linenodiv']
-            line_no_div.append(BeautifulSoup(line_str, 'html.parser'))
-
-            line_table_data = soup.new_tag('td')
-            line_table_data['class'] = ['sidelinenos']
-            line_table_data.append(line_no_div)
-
-
-            highlight_div = soup.new_tag('div')
-            highlight_div['class'] = ['highlight']
-            highlight_div.append(BeautifulSoup(pcode, 'html.parser'))
-
-            code_table_data = soup.new_tag('td')
-            code_table_data['class'] = ['code']
-            code_table_data.append(highlight_div)
-
-            table_row = soup.new_tag('tr')
-            table_row.append(line_table_data)
-            table_row.append(code_table_data)
-
-            side_table.append(table_row)
-        return side_table

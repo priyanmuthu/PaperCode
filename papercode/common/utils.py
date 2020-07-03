@@ -13,6 +13,7 @@ import base64
 class Language(enum.Enum):
     Python = 1
     Typescript = 2
+    R = 3
 
 class Paper:
     def __init__(self, paper_size, max_lines, template_path):
@@ -59,6 +60,8 @@ class UtilMethods:
             return highlighter.highlight_python_file(source_code)
         elif lang == Language.Typescript:
             return highlighter.highlight_ts_file(source_code)
+        elif lang == Language.R:
+            return highlighter.highlight_r_file(source_code)
         else:
             return highlighter.highlight_file(source_code)
 

@@ -1,4 +1,4 @@
-from papercode.printer.code_file import CodeFile, PyCodeFile, TsCodeFile
+from papercode.printer.code_file import CodeFile, PyCodeFile, TsCodeFile, RCodeFile
 from papercode.printer.base_div import EverythingBaseDiv, EmptyBaseDiv, BigFunctionBaseDiv
 from papercode.printer.configurable_base_div import ConfigurableBaseDiv
 from papercode.printer.sidebar_div import SmallFunctionSidebarDiv, ReferencesSidebarDiv
@@ -12,7 +12,12 @@ import difflib
 def run():
     # runpy()
     runts()
+    # runr()
 
+def runr():
+    file_path = abspath('./papercode/temp/kross/R/get_function_locations.R')
+    code_file = RCodeFile(file_path, None)
+    print(code_file.preformated_all_lines)
 
 def runts():
     file_path = abspath('../PaperCode/papertsc/test/project1/pytutor.ts')
