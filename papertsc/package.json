@@ -17,7 +17,7 @@
   "dependencies": {
     "commander": "^4.1.1",
     "highlight.js": "^9.18.1",
-    "prismjs": "^1.19.0",
+    "prismjs": "^1.21.0",
     "ts-morph": "^6.0.2",
     "typescript-json-serializer": "^1.4.4",
     "uuid": "^3.4.0"
